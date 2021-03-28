@@ -68,6 +68,8 @@ def fetch(address, data, timeout=1):
 if __name__ == '__main__':
 	port = 7001
 
+	print("Start...")
+
 	response = fetch(('192.168.1.60', 3000), {
 		"request": "subscribe",
 		"port": port,
@@ -81,11 +83,14 @@ if __name__ == '__main__':
 		socket.bind(('192.168.1.60', port))
 	except s.error as e:
 		print(e)
+	
+	print("Waiting for ping...")
 
 	socket.listen(5)
 
-	while True:
-		c, addr = socket.accept()
-		print("got connection from", addr)
-		sendJSON(c, {"response":"pong"})
-		c.close()
+	c, addr = socket.accept()
+	print("got connection from", addr)
+	sendJSON(c, {"response":"pong"})
+	c.close()
+
+	print("End...")
