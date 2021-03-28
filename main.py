@@ -2,67 +2,90 @@ import socket as s
 import json
 import time
 
+
 class NotAJSONObject(Exception):
+	pass
+
+class Timeout(Exception):
 	pass
 
 
 def sendJSON(socket, obj):
-    message = json.dumps(obj)
-    
-    if message[0] != "{":
-        raise NotAJSONObject('sendJSON support only JSON Object Type')
-    
-    message = message.encode('utf8')
-    total = 0
+	"""
+		Vérifie que l'objet est bien un JSON\n
+		Le convertit en objet JSON et l'envoie vers l'adresse liée au socket
+	"""
 
-    while total < len(message):
-        sent = socket.send(message[total:])
-        total += sent
+	message = json.dumps(obj)
+	if message[0] != '{':
+		raise NotAJSONObject('sendJSON support only JSON Object Type')
+	message = message.encode('utf8')
+	total = 0
+	while total < len(message):
+		sent = socket.send(message[total:])
+		total += sent
 
-def receiveJSON(socket, timeout=1):
-    finished = False
-    message = ""
-    data = ""
-    start = time.time()
+def receiveJSON(socket, timeout = 1):
+	"""
+		Reçoit un socket et un timer, attend que le message soit reçu.\n
+		Vérifie que le message est bien un JSON et le convertit.\n
+		Retourne l'objet JSON.
+	"""
 
-    while not finished:
-        message += socket.recv(4096).decode("utf8")
+	finished = False
+	message = ''
+	data = ''
+	start = time.time()
+	while not finished:
+		message += socket.recv(4096).decode('utf8')
+		if len(message) > 0 and message[0] != '{':
+			raise NotAJSONObject('Received message is not a JSON Object')
+		try:
+			data = json.loads(message)
+			finished = True
+		except json.JSONDecodeError:
+			if time.time() - start > timeout:
+				raise Timeout()
+	
+	socket.close()
+	return data
 
-        if len(message) > 0 and message[0] != '{':
-            raise NotAJSONObject("Received message is not a JSON Object")
+def fetch(address, data, timeout=1):
+	"""
+	Utilise receiveJSON et sendJSON.\n
+	Envoie un message vers l'adresse encodée.\n
+	Attend un retour et renvoie la réponse.
+	"""
 
-        try:
-            data = json.loads(message)
-            finished = True
-        except:
-            if time.time() - start > timeout:
-                raise TimeoutError()
-    
-    return data
+	socket = s.socket()
+	socket.connect(address)
 
+	sendJSON(socket, data)
+	response = receiveJSON(socket, timeout)
+	return response
 
-subscribeData = '{ "request": "subscribe", "port": 7000, "name": "fun_name_for_the_client", "matricules": ["12345", "67890"] }'
-pongData = '{ "response": "pong" }'
 
 if __name__ == '__main__':
-    SERVER_ADDRESS = ('127.0.0.1', 3000)
-    CLIENT_ADDRESS = ('127.0.0.1', 7000)
-    SUBSCRIPTION = json.loads(subscribeData)
-    PONG = json.loads(pongData)
+	port = 7001
 
-    socket = s.socket()
-    socket.bind(CLIENT_ADDRESS)
-    socket.connect(SERVER_ADDRESS)
-    sendJSON(socket, SUBSCRIPTION)
-    print(receiveJSON(socket))
+	response = fetch(('192.168.1.60', 3000), {
+		"request": "subscribe",
+		"port": port,
+		"name": "fun_name_for_the_client",
+		"matricules": ["12345", "67890"]
+	})
 
+	socket = s.socket(s.AF_INET, s.SOCK_STREAM)
+	
+	try:
+		socket.bind(('192.168.1.60', port))
+	except s.error as e:
+		print(e)
 
-    # message = ""
-    # finished = False
-    # while not finished:
-    #     message += socket.recv(4096).decode("utf8")
+	socket.listen(5)
 
-    #     if len(message) > 0 and message[0] != '{':
-    #         raise NotAJSONObject("Received message is not a JSON Object")
-    
-    # print(message)
+	while True:
+		c, addr = socket.accept()
+		print("got connection from", addr)
+		sendJSON(c, {"response":"pong"})
+		c.close()
