@@ -1,0 +1,16 @@
+ALGORITHME
+
+> Déterminer les résultats que votre code doit produire
+    Le problème principal de l'algorithme est de déplacer une série de pions sur la plateau de jeu.
+
+> Fixez un point de départ pour votre algorithme
+    En entrée, il faut recevoir le plateau actuel
+    Il faut avant tout les coordonées des pions alliés sur le plateau, une couleur et une direction vers laquelle les pions souhaitent se déplacer.
+    Les données proviennent du plateau, que ce soit les coordonnées ou la couleur.
+    Les caractéristiques d'un pion se fait par sa couleur est son emplacement.
+
+> Déterminer le point de terminaison de votre algorithme
+    Pendant le programme, il faut vérifier plusieurs choses.
+    A la fin, il faudra renvoyer le plateau modifié avec les pions qui ont été bougé.
+
+> Les étapes de l'algorithme
