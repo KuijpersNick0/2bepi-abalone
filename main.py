@@ -1,6 +1,7 @@
 import socket as s
 import json
 import time
+import sys
 
 
 class NotAJSONObject(Exception):
@@ -66,21 +67,21 @@ def fetch(address, data, timeout=1):
 
 
 if __name__ == '__main__':
-	port = 7001
+	port = int(sys.argv[1])
 
 	print("Start...")
 
-	response = fetch(('192.168.1.60', 3000), {
+	response = fetch(('127.0.0.1', 3000), {
 		"request": "subscribe",
 		"port": port,
-		"name": "fun_name_for_the_client",
-		"matricules": ["12345", "67890"]
+		"name": "katseyres",
+		"matricules": ["18332"]
 	})
 
 	socket = s.socket(s.AF_INET, s.SOCK_STREAM)
 	
 	try:
-		socket.bind(('192.168.1.60', port))
+		socket.bind(('127.0.0.1', port))
 	except s.error as e:
 		print(e)
 	
@@ -93,4 +94,32 @@ if __name__ == '__main__':
 	sendJSON(c, {"response":"pong"})
 	c.close()
 
-	print("End...")
+	socket = s.socket(s.AF_INET, s.SOCK_STREAM)
+	
+	try:
+		socket.bind(('127.0.0.1', port))
+	except s.error as e:
+		print(e)
+	
+	socket.listen(5)
+	c, addr = socket.accept()
+	print("got connection from", addr, c, sep=" ")
+	sendJSON(c, {"response":"pong"})
+	c.close()
+
+	while True:
+		print("Waiting my turn")
+		socket = s.socket(s.AF_INET, s.SOCK_STREAM)
+
+		try:
+			socket.bind(('127.0.0.1', port))
+			socket.connect(('127.0.0.1', 3000))
+		except s.error as e:
+			print(e)
+		
+		sendJSON(socket, {
+   			"marbles": [[1, 1], [2, 2]],
+   			"direction": "SE"
+		})
+
+		print("sent")
