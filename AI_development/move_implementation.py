@@ -19,6 +19,7 @@ moves = {
     "W" :[ 0, -1]
 }
 
+
 def displayGrid(board):
     result = "\n\t [ CURRENT BOARD ]\n\n"
     for index,row in enumerate(board):
@@ -63,8 +64,11 @@ def colored(marblesArray, color):
         Check if all marbles have the right color.
     """
     for marble in marblesArray:
+        if color != 'W' or color != 'B':
+            print(f"[ERROR] there is no marble in this case - marble : {marblesArray}")
+            return False
         if board[marble[0]][marble[1]] != color:
-            # print("[ERROR] wrong color")
+            print(f"[ERROR] wrong color - marbles : {marblesArray}, color :{color}")
             return False
     return True
 
@@ -194,12 +198,12 @@ def sumito(marblesToMove):
     pass
 
 
+
 def Action(marblesArray, moveName, color):
     newPositions = []
     print("")
 
     if not colored(marblesArray, color):
-        print(f"[ERROR] wrong color - marbles : {marblesArray}, move : {moveName}, color :{color}")
         return False
 
     if not existingDirection(moveName):
@@ -223,13 +227,14 @@ def Action(marblesArray, moveName, color):
         return False
 
     updateBoard(marblesArray, newPositions)   
-        
+
+
 if __name__ == '__main__':
-    Action([[0,0], [1, 0]], "SW", "W")
-    Action([[0,1],[1,2],[2,3]], "SE", "W")
-    Action([[6,4]], "NW", "B")
+    # Action([[0,0], [1, 0]], "SW", "W")
+    # Action([[0,1],[1,2],[2,3]], "SE", "W")
+    # Action([[6,4]], "NW", "B")
     Action([[5,3]], "NW", "B")
     displayGrid(board)
 
     print("")
-    
+
