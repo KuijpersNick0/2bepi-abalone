@@ -65,15 +65,16 @@ def colored(marblesArray, color):
         Check if all marbles have the right color.
     """
     for marble in marblesArray:
-        # print(board[marble[0]][marble[1]])
-        if board[marble[0]][marble[1]] != color:
-            print(f"[ERROR] one of your cases has no marble - marbles : {marblesArray}")
+        if board[marble[0]][marble[1]] != 'W' and board[marble[0]][marble[1]] != 'B':
+            print(f"[ERROR] one of your cases has no marble - the wrong marble is {marble}")
             return False
-    if color == 'W' or color == 'B':
-        return True
+        else:
+            # print(board[marble[0]][marble[1]])
+            if board[marble[0]][marble[1]] != color:
+                print(f"[ERROR] wrong color - marbles : {marblesArray}, the wrong color is '{board[marble[0]][marble[1]]}'")
+                return False
 
-    print(f"[ERROR] wrong color - marbles : {marblesArray}, color :{color}")
-    return False
+    return True
 
 def chain(marblesArray, move=None):
     """
@@ -211,22 +212,21 @@ def Action(marblesArray, moveName, color):
         return False
 
     if not existingDirection(moveName):
-        print(f"[ERROR] wrong movement - marbles : {marblesArray}, move : {moveName}, color :{color}")
+        print(f"[ERROR] wrong movement - marbles : {marblesArray}, there is no move called '{moveName}'")
         return False
 
     if chain(marblesArray) is not None:
         if lineMove(marblesArray, moveName) == -1:
             print(f"[ERROR] the list of marbles is not a chain - {marblesArray}")
         elif lineMove(marblesArray, moveName) is not False:
-            print("line ?")
+            # print("line ?")
             newPositions = lineMove(marblesArray, moveName)
         else:
-            print("arrow ?")
+            # print("arrow ?")
             newPositions = arrowMove(marblesArray, moveName)
     else:
-        print("solo ?")
+        # print("solo ?")
         newPositions = soloMove(marblesArray, moveName)
-
 
     if not newPositions:
         # displayGrid(board)
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     # Action([[0,0], [1, 0]], "SW", "W")
     # Action([[0,1],[1,2],[2,3]], "SE", "W")
     # Action([[6,4]], "NW", "B")
-    Action([[0,0],[1,0],[2,2]], "NE", "W")
+    Action([[0,4],[1,5]], "SE", "W")
     displayGrid(board)
 
     print("")
