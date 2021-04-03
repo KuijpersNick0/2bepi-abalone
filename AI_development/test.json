@@ -1,0 +1,36 @@
+[
+    {
+        "depth": 0,
+        "childNodes":[
+            {
+                "depth":1,
+                "wins":0,
+                "simulations":2,
+                "probability": "wins/simulations",
+                "move": [],
+                "childNodes":[
+                    {
+                        "depth":2,
+                        "wins":0,
+                        "simulations":2
+                    },
+                    {
+                        "depth":2,
+                        "wins":0,
+                        "simulations":2
+                    }
+                ]
+            },
+            {
+                "depth":1,
+                "wins":2,
+                "simulations":3
+            },
+            {
+                "depth":1,
+                "wins":1,
+                "simulations":1
+            }
+        ]       
+    }
+]
