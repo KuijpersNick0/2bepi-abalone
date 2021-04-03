@@ -23,6 +23,7 @@ class MonteCarloTreeSearch(object):
     writer.writerow(["state", "wins", "plays","probability"])
     
     def writeMyCsv(self, state, wins,plays):
+        pass
 
     def update(self, state):
         self.states.append(state)
@@ -42,7 +43,7 @@ class MonteCarloTreeSearch(object):
         '''
         games = 0 
         begin = datetime.datetime.utcnow()
-        while datetime.datetime.utcnow() - begin < self.calculation_time: #on simule jusqu'a ce qu'on veut que ça s'arrête
+        while datetime.datetime.utcnow() - begin < self.calculation_time: #on simule jusqu'a ce qu'on veut que Ã§a s'arrÃªte
             self.run_simulation()
             games += 1
 
@@ -57,7 +58,7 @@ class MonteCarloTreeSearch(object):
         plays, wins = self.plays, self.wins
 
         visited_states = set()
-        states_copy = self.states[:] #on fait une copie des notre jeu pour pas déconner s'il y a  de la casse
+        states_copy = self.states[:] #on fait une copie des notre jeu pour pas dÃ©conner s'il y a  de la casse
         state = states_copy[-1]
         player = self.board.current_player(state)
 
@@ -88,7 +89,7 @@ class MonteCarloTreeSearch(object):
                 move, state = choice(moves_states)
             '''
 
-            if expand and (player, state) not in self.plays: #on initialise si on l'as jamais joué
+            if expand and (player, state) not in self.plays: #on initialise si on l'as jamais jouÃ©
                 #expand = False si on veut jouer des trucs safe
                 self.plays[(player, state)] = 0
                 self.wins[(player, state)] = 0
@@ -96,7 +97,7 @@ class MonteCarloTreeSearch(object):
             visited_states.add((player, state))
             
             player = self.board.current_player(state)
-            winner = self.board.winner(states_copy) #methode ds board qui check si on a gagné
+            winner = self.board.winner(states_copy) #methode ds board qui check si on a gagnÃ©
             if winner:
                 break #notre sortie seulement si on gagne
 
