@@ -1,3 +1,4 @@
+
 board = [
     ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
     ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
@@ -53,11 +54,11 @@ def aligned(vector01, vector02):
     """
         Check if 2 vectors are aligned or not.
     """
-    # print(vector01, vector02)
     sum = [vector01[0] + vector02[0], vector01[1] + vector02[1]]
     product = [2*i for i in vector01]
     if product == sum or sum == [0, 0]:
         return True
+    
     return False
 
 def colored(marblesArray, color):
@@ -66,13 +67,10 @@ def colored(marblesArray, color):
     """
     for marble in marblesArray:
         if board[marble[0]][marble[1]] != 'W' and board[marble[0]][marble[1]] != 'B':
-            print(f"[ERROR] one of your cases has no marble - the wrong marble is {marble}")
-            return False
+            return "caseWithoutMarbleError"
         else:
-            # print(board[marble[0]][marble[1]])
             if board[marble[0]][marble[1]] != color:
-                print(f"[ERROR] wrong color - marbles : {marblesArray}, the wrong color is '{board[marble[0]][marble[1]]}'")
-                return False
+                return "wrongColorError"
 
     return True
 
@@ -82,39 +80,35 @@ def chain(marblesArray, move=None):
         Return the direction if True.
     """
     if len(marblesArray) > 3:
-        return False
+        return "lengthChainError"
     
     if len(marblesArray) == 1:
         return move
 
     marblesArray.sort()
-    # print(marblesArray)
-    
     if move is not None:
         if marblesArray[0] == [marblesArray[1][0] + move[0], marblesArray[1][1] + move[1]]:
-            # print(f"My move is {move}")
             return chain(marblesArray[1:], move=move)
 
     for currentMove in moves.values():
-        # print("loop in moves...")
         if marblesArray[0] == [marblesArray[1][0] + currentMove[0], marblesArray[1][1] + currentMove[1]]:
-            # print(f"found move : {currentMove} !")
             return chain(marblesArray[1:], move=currentMove)
     
-    return False
+    return "marblesChainError"
 
-def lineMove(marblesArray, moveName):
+def lineMove(marblesArray, moveName, opponent=False):
     """
         Do the line move or return False
     """
     vectorMove = moves[moveName]
     vectorChain = chain(marblesArray)
     lastMarble = marblesArray[0]
-    # print(lastMarble)
-    # print(vectorChain)
 
-    if vectorChain is False:
-        return -1
+    if vectorChain == "lengthChainError" or vectorChain == "marblesChainError":
+        return "chainError"
+    
+    if vectorChain == None and opponent is False:
+        return "soloMarbleInfo"
 
     if (aligned(vectorMove, vectorChain)):
         if vectorMove == [-1, -1]:
@@ -138,109 +132,166 @@ def lineMove(marblesArray, moveName):
                 if marble[1] < lastMarble[1]:
                     lastMarble = marble
     
-        # print(lastMarble)
-        # print(board[lastMarble[0]][lastMarble[1]])
+        currentValue = board[lastMarble[0]][lastMarble[1]]
+        try:
+            nextValue = board[lastMarble[0] + vectorMove[0]][lastMarble[1] + vectorMove[1]] 
+        except:
+            return "allyOutOfBoardError"
 
-        nextValue = board[lastMarble[0] + vectorMove[0]][lastMarble[1] + vectorMove[1]] 
         if nextValue == 'X':
-            print(f"[ERROR] movement out of board - marbles : {marblesArray}, move : {moveName}")
-            return False
-        elif nextValue == board[lastMarble[0]][lastMarble[1]]:
-            # print(nextValue, board[lastMarble[0]][lastMarble[1]])
-            print(f"[ERROR] there is already one of your marbles there - marbles : {marblesArray}, move : {moveName}")
-            return False
+            return "outLimitError"
+        elif nextValue == currentValue:
+            return "sameValueError"
         elif nextValue == 'E':
             marblesMoved = []
             for marble in marblesArray:
                 marblesMoved.append([marble[0] + vectorMove[0], marble[1] + vectorMove[1]])
+            updateBoard(marblesArray, marblesMoved)
+            return True
+        else:
+            try: # ! test [CHECKED]
+                lastOpponentMarbleValue = board[lastMarble[0] + len(marblesArray) * vectorMove[0]][lastMarble[1] + len(marblesArray) * vectorMove[1]]
+            except:
+                lastOpponentMarbleValue = board[lastMarble[0] + (len(marblesArray) - 1) * vectorMove[0]][lastMarble[1] + (len(marblesArray) - 1) * vectorMove[1]]
+            
+            if lastOpponentMarbleValue != 'E' and lastOpponentMarbleValue == 'X':
+                return "NonEmptyError"
+            else:
+                marblesMoved = []
+                opponentMarbles = []
+                opponentMarblesMoved = []
+                
+                for marble in marblesArray:
+                    marblesMoved.append([marble[0] + vectorMove[0], marble[1] + vectorMove[1]])
 
-            return marblesMoved
-    return False
+                for i in range(1, len(marblesArray)):
+                    opponentValue = board[lastMarble[0] + i * vectorMove[0]][lastMarble[1] + i * vectorMove[1]]
+                    if(opponentValue == 'E'):
+                        break
+                    opponentMarbles.append([lastMarble[0] + i * vectorMove[0], lastMarble[1] + i * vectorMove[1]])
 
-def arrowMove(marblesArray, moveName):
+                if len(opponentMarbles) == 1:
+                    soloMove(opponentMarbles, moveName, opponent=True)
+                else:
+                    lineMove(opponentMarbles, moveName, opponent=True)
+
+                updateBoard(opponentMarbles, opponentMarblesMoved)
+                updateBoard(marblesArray, marblesMoved)
+                return True
+                
+    return "nonAlignedError"
+
+def arrowMove(marblesArray, moveName, opponent=False):
     updatedMarbles = []
+    if len(marblesArray) == 1:
+        return "singleMarbleInfo"
+
     for marble in marblesArray:
         nextMarbleValue = board[marble[0] + moves[moveName][0]][marble[1] + moves[moveName][1]]
         currentMarbleValue = board[marble[0]][marble[1]]
         if nextMarbleValue == currentMarbleValue:
-            print(f"[ERROR] there is already one of your marbles there - marbles : {marblesArray}, move : {moveName}")
-            return False
+            return "allyPresenceError"
         elif nextMarbleValue == 'X':
-            print(f"[ERROR] movement out of board - marbles : {marblesArray}, move : {moveName}")
-            return False
-        
-        updatedMarbles.append([marble[0] + moves[moveName][0], marble[1] + moves[moveName][1]])
-    return updatedMarbles
+            return "outLimitError"
+        elif nextMarbleValue == 'E':
+            pass
+        else:
+            if board[marble[0] + 2 * moves[moveName][0]][marble[1] + 2 * moves[moveName][1]] == nextMarbleValue:
+                return "opponentMoveError"
 
-def soloMove(marblesArray, moveName):
-    # print(marbleArray, moves[moveName])
-    if len(marblesArray) == 1:
-        nextValue = board[marblesArray[0][0] + moves[moveName][0]][marblesArray[0][1] + moves[moveName][1]]
-        if nextValue == 'X':
-            print(f"[ERROR] movement out of board - marbles : {marblesArray}, move : {moveName}")
-            return False
-        elif nextValue == board[marblesArray[0][0]][marblesArray[0][1]]:
-            print(f"[ERROR] there is already one of your marbles there - marbles : {marblesArray}, move : {moveName}")
-        return [[marblesArray[0][0] + moves[moveName][0], marblesArray[0][1] + moves[moveName][1]]]
+        updatedMarbles.append([marble[0] + moves[moveName][0], marble[1] + moves[moveName][1]])
     
-    print(f"[ERROR] you don't move a single marble - marbles : {marblesArray}, move : {moveName}")
-    return False
+    updateBoard(marblesArray, updatedMarbles)
+    return True
+
+def soloMove(marblesArray, moveName, opponent=False):
+    if len(marblesArray) == 1:
+        currentValue = board[marblesArray[0][0]][marblesArray[0][1]]
+        try: # ! test [CHECKED]
+            nextValue = board[marblesArray[0][0] + moves[moveName][0]][marblesArray[0][1] + moves[moveName][1]]
+        except:
+            nextValue = board[marblesArray[0][0]][marblesArray[0][1]]
+
+        if nextValue == 'X':
+            return "outLimitError"
+        elif nextValue == currentValue:
+            return "allyPresenceError"
+        elif nextValue == 'E':
+            pass
+        else:
+            return "opponentMoveError"
+
+        marbleMoved = [[marblesArray[0][0] + moves[moveName][0], marblesArray[0][1] + moves[moveName][1]]]
+        updateBoard(marblesArray, marbleMoved)
+        return True
+    
+    return "notAsingleMarbleError"
 
 def updateBoard(oldPositions, newPositions):
     color = board[oldPositions[0][0]][oldPositions[0][1]]
-    # print(color)
-    # print(oldPositions)
-    # print(newPositions)
 
     for marble in oldPositions:
         board[marble[0]][marble[1]] = 'E'
     
     for marble in newPositions:
-        # print(marble)
         board[marble[0]][marble[1]] = f"{color}"
 
-def sumito(marblesToMove):
-    pass
+def legalMoves(marblesArray):
+    legalMoves = []
 
+    for moveName in moves:
+        if lineMove(marblesArray, moveName) or arrowMove(marblesArray) or soloMove(marblesArray):
+            legalMoves.append([marblesArray, moveName])
 
+    return legalMoves
 
 def Action(marblesArray, moveName, color):
-    newPositions = []
-    print("")
-
-    if not colored(marblesArray, color):
+    if colored(marblesArray, color) is not True:
+        print(f"color error : '{color}'")
         return False
 
-    if not existingDirection(moveName):
-        print(f"[ERROR] wrong movement - marbles : {marblesArray}, there is no move called '{moveName}'")
+    if existingDirection(moveName) is False:
+        print(f"direction error : '{moveName}'")
         return False
 
-    if chain(marblesArray) is not None:
-        if lineMove(marblesArray, moveName) == -1:
-            print(f"[ERROR] the list of marbles is not a chain - {marblesArray}")
-        elif lineMove(marblesArray, moveName) is not False:
-            # print("line ?")
-            newPositions = lineMove(marblesArray, moveName)
-        else:
-            # print("arrow ?")
-            newPositions = arrowMove(marblesArray, moveName)
-    else:
-        # print("solo ?")
-        newPositions = soloMove(marblesArray, moveName)
+    if chain(marblesArray) != "lengthChainError" and chain(marblesArray) != "marblesChainError":
+        
+        lm = lineMove(marblesArray, moveName)
+        am = arrowMove(marblesArray, moveName)
+        sm = soloMove(marblesArray, moveName)
+        if lm is not True:
+            if am is not True:
+                if sm is not True:
+                    print(f"lineMove  : {lm}")
+                    print(f"arrowMove : {am}")
+                    print(f"soloMove  : {sm}")
 
-    if not newPositions:
-        # displayGrid(board)
-        return False
-
-    updateBoard(marblesArray, newPositions)   
 
 
 if __name__ == '__main__':
-    # Action([[0,0], [1, 0]], "SW", "W")
-    # Action([[0,1],[1,2],[2,3]], "SE", "W")
-    # Action([[6,4]], "NW", "B")
-    Action([[0,4],[1,5]], "SE", "W")
+    # Action([[2,3],[2,4]], "SE", "W")
+    # Action([[3,4],[3,5]], "SW", "W")
+    # Action([[4,4],[4,5]], "SW", "W")
+    # Action([[8,8],[7,8]], "NE", 'B')
+    # Action([[7,7]], "NE", 'B')
+    # Action([[0,0],[1,1],[2,2]], "SE", 'W')
+    # Action([[3,3]], "SE", 'W')
+    # Action([[2,2]], "SE", 'W')
+    # Action([[3,3],[4,4],[5,5]], "SE", 'W')
+    # Action([[6,6],[5,5]], "SE", 'W')
+    # Action([[6,6],[7,7]], "SE", 'W')
+    # Action([[8,8]], 'SW', 'W')
+    Action([[8,8],[7,7],[6,6]], 'NW', 'B')
+    Action([[7,8]], 'NW', 'B')
+    Action([[8,6],[7,5],[6,4]], "NW", 'B')
+    Action([[8,7],[7,6],[6,5]], "NW", 'B')
+    # Action([[0,0],[0,1]], 'NE', 'W') # ! [CHECKED] peut-être que ça passe de l'autre côté, à tester !
+    # Action([[1,5]], 'NE', 'W')
+    # Action([[8,8],[7,7]], "SE", 'W')
+    # Action([[8,6], [7,6]], "NE", 'B')
+    # Action([[6,5],[7,6]], 'NW', 'B')
+    
     displayGrid(board)
+    # print(board)
 
     print("")
-
