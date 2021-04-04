@@ -1,7 +1,8 @@
-class board(object): 
+
+class board: 
 
     states = []
-    state = states[-1]
+    #state = states[-1]
 
     def start(self):
         displayGrid(board)
@@ -11,9 +12,11 @@ class board(object):
 
     def next_state(self, state, move):
        if(current_player(state) =='W'):
-           return Action(move,'W')
+           Action(move,'W')
+           return (move,'W')
        elif(current_player(state) == 'B'):
-           return Action(move,'B')
+           Action(move,'B')
+           return (move,'B')
 
  
     def legal_plays(self, states):
@@ -25,6 +28,7 @@ class board(object):
 
     def winner(self, states):
         #check le gagnant
+        #si gaganant return true
         pass
 
 
@@ -262,6 +266,8 @@ class board(object):
         #Action([[6,4]], "NW", "B")
         #Action([[5,3]], "NW", "B")
         displayGrid(board)
+        
+
 
         print("")
     

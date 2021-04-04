@@ -2,27 +2,54 @@ import datetime
 from random import choice
 import csv
  
-class MonteCarloTreeSearch(object):
+class MonteCarloTreeSearch:
 
     def __init__(self, board, **kwargs):
         self.board = board  
-        self.states = [] #l'ensemble des nodes en quelque sorte
+        self.states = [] #l'ensemble des nodes en quelque sorte == (marbles,direction,player)
 
-        self.wins = {} #les gainzzz
-        self.plays = {} #les simulations (state, player)
+        self.wins = {} #les gainzzz (state,player, int)
+        self.plays = {} #nombre simulations  (state, player, int)
 
-        self.C = kwargs.get('C', 1.4) #notre variable dexploration au plus grand au + on explore
+        self.C = kwargs.get('C', 1.4) #notre variable dexploration au plus grand au + on explore 
 
-        self.max_moves = kwargs.get('max_moves', 1000) #le max de moves qu'on laisse la machine simuler
+        self.max_moves = kwargs.get('max_moves', 5000) #le max de moves qu'on laisse la machine simuler
 
         seconds = kwargs.get('time', 300) #cb de temps on simule
         self.calculation_time = datetime.timedelta(seconds=seconds)
-
-    with open('data.csv', 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(["state", "wins", "plays","probability"])
     
-    def writeMyCsv(self, state, wins,plays):
+    res = 0
+
+    def writeMyCsv_FirstTime(self, state, wins, plays):
+        if res==0: #une fois j'ecris mes colonnes
+            f = open('data.csv', 'w', newline='')
+            writer = csv.writer(file)
+            writer.writerow(["wins", "state", "plays","probability"])
+            f.close()
+            res=1
+        if f.closed() == true: #j'ouvre et j'ecris
+            f.open()
+            writer.writerow([wins, plays])
+            f.close()
+
+    def writeMyCsv_NORMAL(self, state, wins, plays):
+        with open("data.csv") as sourceFile:
+            change = sourceFile.read().splitlines()
+        try:
+            if state in change:
+                change.pop(change.index(state))
+            else:
+                print(state + " is not found in the file")
+        except ValueError:
+            print("Nom d'une pipe")
+
+        with open("data.csv", "a") as dataFile:
+            #dataFile.seek(0) #de stackoverflow jsp si n√©cessaire
+            #dataFile.truncate()
+            dataWriter = csv.writer(dataFile)
+        for state in change:
+            dataWriter.writeRow([state, wins, plays])
+        dataFile.close()
 
     def update(self, state):
         self.states.append(state)
@@ -42,14 +69,14 @@ class MonteCarloTreeSearch(object):
         '''
         games = 0 
         begin = datetime.datetime.utcnow()
-        while datetime.datetime.utcnow() - begin < self.calculation_time: #on simule jusqu'a ce qu'on veut que Áa s'arrÍte
+        while datetime.datetime.utcnow() - begin < self.calculation_time: #on simule jusqu'a ce qu'on veut que √ßa s'arr√™te
             self.run_simulation()
             games += 1
-
+            
         '''
         moves_states = [(p, self.board.next_state(state, p)) for p in legal] #ON ENREGISTRE ICI LE MOVE QUI CORRESPONDS AU NODE
         percent_wins, move = max((self.wins.get((player, S), 0) / self.plays.get((player, S), 1), p) for p, S in moves_states)
-        #tuple (%victoire, moves) EN GROS ON MET LES POIDS SUR LES NODES
+        #tuple (%victoire, moves) EN GROS ON MET LES POIDS SUR LES NODES ET ON PRENDS LE MAX
         return move
         '''
 
@@ -57,7 +84,7 @@ class MonteCarloTreeSearch(object):
         plays, wins = self.plays, self.wins
 
         visited_states = set()
-        states_copy = self.states[:] #on fait une copie des notre jeu pour pas dÈconner s'il y a  de la casse
+        states_copy = self.states[:] #on fait une copie des notre jeu pour pas d√©conner s'il y a  de la casse
         state = states_copy[-1]
         player = self.board.current_player(state)
 
@@ -69,12 +96,15 @@ class MonteCarloTreeSearch(object):
             state = self.board.next_state(state, play) 
             states_copy.append(state)
 
+            player = self.board.current_player(state)
+
             '''
             #POUR JOUER SERIEUX
             moves_states = [(p, self.board.next_state(state, p)) for p in legal]
 
             if all(plays.get((player, S)) for p, S in moves_states):
-                #SI ON A TOUT LES STATS GO LES JOUER
+
+                #SI ON A TOUT LES STATS GO LES JOUER AVEC UCB1 NOTRE FORMULE D'EXPLORATION MCTS
 
                 log_total = log(
                     sum(plays[(player, S)] for p, S in moves_states))
@@ -88,15 +118,15 @@ class MonteCarloTreeSearch(object):
                 move, state = choice(moves_states)
             '''
 
-            if expand and (player, state) not in self.plays: #on initialise si on l'as jamais jouÈ
+            if expand and (player, state) not in self.plays: #on initialise si on l'as jamais jou√©
                 #expand = False si on veut jouer des trucs safe
                 self.plays[(player, state)] = 0
                 self.wins[(player, state)] = 0
+                writeMyCsv(wins, plays)
 
             visited_states.add((player, state))
-            
-            player = self.board.current_player(state)
-            winner = self.board.winner(states_copy) #methode ds board qui check si on a gagnÈ
+           
+            winner = self.board.winner(states_copy) #methode ds board qui check si on a gagn√©
             if winner:
                 break #notre sortie seulement si on gagne
 
@@ -104,9 +134,21 @@ class MonteCarloTreeSearch(object):
         for player, state in visited_states: #on soigne les stats enfin
             if (player, state) not in self.plays:
                 continue
+
             self.plays[(player, state)] += 1
+            writeMyCsv_NORMAL(self, state, wins, plays)
+
             if player == winner:
                 self.wins[(player, state)] += 1
+                writeMyCsv_NORMAL(self, state, wins, plays)
+
+
+    #if __name__=='__main__':
+
+    #    mcts = MonteCarloTreeSearch(board)
+    #    mcts.get_play()
+
+
 
 
     
