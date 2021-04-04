@@ -21,7 +21,10 @@ moves = {
 }
 
 
-def displayGrid(board):
+def displayBoard(board):
+    """
+        Shows the Abalone board.
+    """
     result = "\n\t [ CURRENT BOARD ]\n\n"
     for index,row in enumerate(board):
         if index == 0 or index == 8:
@@ -46,6 +49,9 @@ def displayGrid(board):
     print(result)
 
 def existingDirection(moveName):
+    """
+        Checks if the direction exists.
+    """
     if moves.get(moveName) is None:
         return False
     return True
@@ -63,7 +69,7 @@ def aligned(vector01, vector02):
 
 def colored(marblesArray, color):
     """
-        Check if all marbles have the right color.
+        Checks if all marbles have the right color.
     """
     for marble in marblesArray:
         if board[marble[0]][marble[1]] != 'W' and board[marble[0]][marble[1]] != 'B':
@@ -76,8 +82,7 @@ def colored(marblesArray, color):
 
 def chain(marblesArray, move=None):
     """
-        Check if all marbles make a chain with a direction.\n
-        Return the direction if True.
+        Checks if all marbles are aligned.
     """
     if len(marblesArray) > 3:
         return "lengthChainError"
@@ -98,7 +103,16 @@ def chain(marblesArray, move=None):
 
 def lineMove(marblesArray, moveName, opponent=False):
     """
-        Do the line move or return False
+        - Checks the chain\n
+        - Checks lhe list (more than one marble ?)\n
+        - Checks the alignment between the move and the chain\n
+            - Finds the chain's last marble\n
+            - Tries to find the next color\n
+                - Next color is out of range, returns an error\n
+                - Next color == 'X' (out of limit), returns an error\n
+                - Next color == actual color ('W' == 'W'), return an error\n
+                - Next color == 'E' (empty), you can move your chain\n
+                - Next color == opposing color, looks at the opponent chain and checks if the box behind the string is empty or out of board
     """
     vectorMove = moves[moveName]
     vectorChain = chain(marblesArray)
@@ -182,6 +196,16 @@ def lineMove(marblesArray, moveName, opponent=False):
     return "nonAlignedError"
 
 def arrowMove(marblesArray, moveName, opponent=False):
+    """
+        - Checks the list only one marble ?)\n
+        - Iterates the list\n
+            - Next box == actual color ('B' == 'B'), returns error\n
+            - Next box  == 'X' (out of limit), returns error\n
+            - Next box == 'E' (empty), you can move your marble there\n
+            - Next box == opposing color, checks if there is an empty box behind its position\n
+        \n
+        For each marbles, if the next box is 'E' or the opposing color (with an empty box behind), you can move your chain !
+    """
     updatedMarbles = []
     if len(marblesArray) == 1:
         return "singleMarbleInfo"
@@ -205,9 +229,19 @@ def arrowMove(marblesArray, moveName, opponent=False):
     return True
 
 def soloMove(marblesArray, moveName, opponent=False):
+    """
+        - Checks the # of marbles in list\n
+        - Checks the next box\n
+            - Next box == 'X' (out of limit), returns an error\n
+            - Next box == actual color ('W' == 'W'), returns an error\n
+            - Next box == 'E' (empty), you can move your marble there\n
+            - Next box == opposing color, returns an error (you have to move at least 2 allies to push your opponent)\n
+        \n
+        So if the next box is 'E', you can move your marble and update your board !
+    """
     if len(marblesArray) == 1:
         currentValue = board[marblesArray[0][0]][marblesArray[0][1]]
-        try: # ! test [CHECKED]
+        try:
             nextValue = board[marblesArray[0][0] + moves[moveName][0]][marblesArray[0][1] + moves[moveName][1]]
         except:
             nextValue = board[marblesArray[0][0]][marblesArray[0][1]]
@@ -228,6 +262,9 @@ def soloMove(marblesArray, moveName, opponent=False):
     return "notAsingleMarbleError"
 
 def updateBoard(oldPositions, newPositions):
+    """
+        Adds changes into the last board.
+    """
     color = board[oldPositions[0][0]][oldPositions[0][1]]
 
     for marble in oldPositions:
@@ -236,16 +273,16 @@ def updateBoard(oldPositions, newPositions):
     for marble in newPositions:
         board[marble[0]][marble[1]] = f"{color}"
 
-def legalMoves(marblesArray):
-    legalMoves = []
-
-    for moveName in moves:
-        if lineMove(marblesArray, moveName) or arrowMove(marblesArray) or soloMove(marblesArray):
-            legalMoves.append([marblesArray, moveName])
-
-    return legalMoves
-
 def Action(marblesArray, moveName, color):
+    """
+        - Checks the marble's color\n
+        - Checks the direction existence\n
+        - Checks the marbles alignment\n
+        \t- Tries making a lineMove\n
+        \t- If lineMove returns an error, tries making an arrowMove\n
+        \t- If arrowMove returns an error, tries making a soloMove\n
+        - If lineMove, arrowMove and soloMove return errors, the program returns False
+    """
     if colored(marblesArray, color) is not True:
         print(f"color error : '{color}'")
         return False
@@ -265,7 +302,16 @@ def Action(marblesArray, moveName, color):
                     print(f"lineMove  : {lm}")
                     print(f"arrowMove : {am}")
                     print(f"soloMove  : {sm}")
+                    return False
 
+def legalMoves(marblesArray):
+    legalMoves = []
+
+    for moveName in moves:
+        if lineMove(marblesArray, moveName) or arrowMove(marblesArray) or soloMove(marblesArray):
+            legalMoves.append([marblesArray, moveName])
+
+    return legalMoves
 
 
 if __name__ == '__main__':
@@ -291,7 +337,7 @@ if __name__ == '__main__':
     # Action([[8,6], [7,6]], "NE", 'B')
     # Action([[6,5],[7,6]], 'NW', 'B')
     
-    displayGrid(board)
+    displayBoard(board)
     # print(board)
 
     print("")
