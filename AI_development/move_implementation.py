@@ -76,11 +76,11 @@ def colored(marblesArray, color):
     """
     for marble in marblesArray:
         if board[marble[0]][marble[1]] != 'W' and board[marble[0]][marble[1]] != 'B':
-            print("no marble here", marblesArray, marble, board[marble[0]][marble[1]])
+            # print("no marble here", marblesArray, marble, board[marble[0]][marble[1]])
             return "caseWithoutMarbleError"
         else:
             if board[marble[0]][marble[1]] != color:
-                print("wrong color marble")
+                # print("wrong color marble")
                 return "wrongColorError"
 
     return True
@@ -305,11 +305,11 @@ def action(marblesArray, moveName, color, update=False):
         - If lineMove, arrowMove and soloMove return errors, the program returns False
     """
     if colored(marblesArray, color) is not True:
-        print(f"color error : '{color}'")
+        # print(f"color error : '{color}'")
         return False
 
     if existingDirection(moveName) is False:
-        print(f"direction error : '{moveName}'")
+        # print(f"direction error : '{moveName}'")
         return False
 
     if chain(marblesArray) != "lengthChainError" and chain(marblesArray) != "marblesChainError":
@@ -320,9 +320,9 @@ def action(marblesArray, moveName, color, update=False):
         if lm[0] is not True:
             if am[0] is not True:
                 if sm[0] is not True:
-                    print(f"lineMove  : {lm}")
-                    print(f"arrowMove : {am}")
-                    print(f"soloMove  : {sm}")
+                    # print(f"lineMove  : {lm}")
+                    # print(f"arrowMove : {am}")
+                    # print(f"soloMove  : {sm}")
                     return False
                 else:
                     # print("solo move")
@@ -440,7 +440,7 @@ def randomPlay(color):
             randomMarble = random.choice(chosenBoxes)
             possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
         else:
-            print("no marbles")
+            # print("no marbles")
             return False
     
     randomChain = random.choice(possibleChains)
@@ -463,10 +463,14 @@ def randomPlay(color):
                     else:
                         return False
                 randomChain = random.choice(possibleChains)
+            elif len(chosenBoxes) == 1:
+                possibleChain =  possibleChainsFromPoint(randomLength, chosenBoxes[0], None, None, [], [], list(moves.values()))
+                chosenBoxes.remove(randomMarble)
             else:
-                return possibleChainsFromPoint(randomLength, chosenBoxes[0], None, None, [], [], list(moves.values()))
-
+                return False
         a = action(randomChain, randomMove, color, True)
+    
+    return color, randomChain, a
         
 
 
@@ -491,19 +495,24 @@ def opposingMarblesOut(yourColor):
 
 if __name__ == '__main__':
     displayBoard(board)
+
     scoreWhite = opposingMarblesOut('B')
     scoreBlack = opposingMarblesOut('W')
+    color = random.choice(('W', 'B'))
     
-    i = 0
     while scoreBlack < 6 and scoreWhite < 6:
         scoreWhite = opposingMarblesOut('B')
         scoreBlack = opposingMarblesOut('W')
 
-        color = random.choice(('W', 'B'))
-        print(randomPlay(color))
-        i += 1
+        if color == 'B':
+            color = 'W'
+        elif color == 'W':
+            color = 'B'
+
+        randomPlay(color)
 
     displayBoard(board)
+    print(scoreBlack, scoreWhite)
     if scoreBlack == 6:
         winner = "Black"
     else:
