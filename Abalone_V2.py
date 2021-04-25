@@ -491,7 +491,7 @@ class Board(Node):
         color = self.board[referenceMarble[0]][referenceMarble[1]]
 
         if move is None:
-            for myMove in possibleDirections0:
+            for myMove in possibleDirections0:               
                 nextMarble = [currentMarble[0] + myMove[0], currentMarble[1] + myMove[1]]
                 previousMarble = [currentMarble[0] - myMove[0], currentMarble[1] - myMove[1]]
             
@@ -551,6 +551,7 @@ class Board(Node):
                 - the chain built from this marble
                 - the move
         """
+        possibleDirections0 = self.possibleDirections
         randomLength = random.choice((1,2,3))
         chosenBoxes = []
         myMoves = list(self.moves.keys())
@@ -561,16 +562,16 @@ class Board(Node):
                     chosenBoxes.append([i,j])
            
         randomMarble = random.choice(chosenBoxes)
-        chains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(self.moves.values()))
+        chains = self.possibleChainsFromPoint(randomLength, randomMarble, possibleDirections0, None, None, [], [])
         randomMove = random.choice(myMoves)
     
-        possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(self.moves.values()))
+        possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, possibleDirections0, None, None, [], [])
         
         while possibleChains == "notMoveFoundError":
             if len(chosenBoxes) > 1:
                 chosenBoxes.remove(randomMarble)
                 randomMarble = random.choice(chosenBoxes)
-                possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(self.moves.values()))
+                possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, possibleDirections0, None, None, [], [])
             else:
                 # print("no marbles")
                 return False
@@ -586,17 +587,17 @@ class Board(Node):
                 if len(chosenBoxes) > 1:
                     chosenBoxes.remove(randomMarble)
                     randomMarble = random.choice(chosenBoxes)
-                    possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(self.moves.values()))
+                    possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, possibleDirections0, None, None, [], [])
                     while possibleChains == "notMoveFoundError":
                         if len(chosenBoxes) > 1:
                             chosenBoxes.remove(randomMarble)
                             randomMarble = random.choice(chosenBoxes)
-                            possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(self.moves.values()))
+                            possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, possibleDirections0, None, None, [], [])
                         else:
                             return False
                     randomChain = random.choice(possibleChains)
                 elif len(chosenBoxes) == 1:
-                    possibleChain =  self.possibleChainsFromPoint(randomLength, chosenBoxes[0], None, None, [], [], list(self.moves.values()))
+                    possibleChain =  self.possibleChainsFromPoint(randomLength, chosenBoxes[0], possibleDirections0, None, None, [], [])
                     chosenBoxes.remove(randomMarble)
                 else:
                     return False
@@ -624,7 +625,8 @@ class Board(Node):
         return 14 - counter
 
     def legal_plays(self, player):
-        allMoves = set()
+        allMoves = []
+        possibleDirections0 = self.possibleDirections
 
         chosenBoxes = []
         myMoves = list(self.moves.keys())
@@ -637,12 +639,20 @@ class Board(Node):
 
         for i in range(lengthChains):
             for j in chosenBoxes:
-                possibleChains = self.possibleChainsFromPoint(i, j, None, None, [], [], list(self.moves.values())) #Peut-etre enlever les doublons je comprends pas parfaitement la methode
+                possibleChains = self.possibleChainsFromPoint(i, j, possibleDirections0, None, None, [], []) 
 
         for i in possibleChains:
             for j in myMoves:
                 if self.action(i, j, player, False) != False:
-                    allMoves.append(i,j)
+                    allMoves.append((i,j))
+                    print(allMoves)
+
+        #aM_T = tuple(allMoves)
+        #print(aM_T)
+
+        #allMoves_SD = set(aM_T)    
+        #allMoves_SD.update(aM_T) #SD = Sans doublons avec set(), mais pas hashable dans l'état actuelle
+        #print(allMoves_SD)
         return allMoves
 
     def is_terminal(self):        
