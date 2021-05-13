@@ -145,11 +145,11 @@ _TTTB = namedtuple("AbaloneBoard", "tup turn winner terminal")
 class Board(_TTTB, Node):    
 
     def tup_to_list(self, tup):
-        self.board = [list(i) for i in tup]
-        return self.board
+        board = [list(i) for i in tup]
+        return board
     def list_to_tup(self, list):
-        self.tup = (tuple(i) for i in list)
-        return self.tup
+        tup = (tuple(i) for i in list)
+        return tup
 
     #def next_state(self, marblesArray, moveName, player):
     #    self.action(marblesArray, moveName, player, True)
@@ -671,12 +671,12 @@ class Board(_TTTB, Node):
         self.board = self.tup_to_list(self.tup)
         self.action(moveA[0], moveA[1], self.turn, True)
         newTup = self.list_to_tup(self.board)     
-        winner = self.winner(self.turn, self.board)
-        turn2 = self.turn
+        winner = self.winner()
+        
         if self.turn == "W":
-            self.turn = "B"
+            turn2 = "B"
         elif self.turn == "B":
-            self.turn = "W"        
+            turn2 = "W"        
         is_terminal = winner is not None
         return Board(newTup, turn2, winner, is_terminal)
 
@@ -686,37 +686,45 @@ class Board(_TTTB, Node):
         self.board = self.tup_to_list(self.tup)
         self.randomPlay(self.turn)
         newTup = self.list_to_tup(self.board)     
-        winner = self.winner(self.turn, self.board)
-        turn2 = self.turn
+        winner = self.winner()
         if self.turn == "W":
-            self.turn = "B"
+            turn2 = "B"
         elif self.turn == "B":
-            self.turn = "W"        
+            turn2 = "W"        
         is_terminal = winner is not None
         return Board(newTup, turn2, winner, is_terminal)
 
-    def is_terminal(self):                
+    def is_terminal(self):              
+        print("hello")
         return self.terminal
 
     def winner(self):
-
-        if not self.terminal:
-            raise RuntimeError(f"reward called on nonterminal board {board}")
-
         scoreWhite = self.opposingMarblesOut('B')
         scoreBlack = self.opposingMarblesOut('W')
         
-
-        if scoreBlack == 6 & self.turn == "W":
+        if scoreBlack == 6 and self.turn == "W":
             return True
-        elif scoreBlack == 6 & self.turn == "B":
+        elif scoreBlack == 6 and self.turn == "B":
             return False
-        elif scoreWhite == 6 & self.turn == "B":
+        elif scoreWhite == 6 and self.turn == "B":
             return True
-        elif scoreWhite == 6 & self.turn == "W":
+        elif scoreWhite == 6 and self.turn == "W":
             return False
 
         return None
+
+    def reward(self):
+        if not board.terminal:
+            raise RuntimeError("reward called on nonterminal board")
+        if self.winner is True:
+            # It's your turn and you've already won. Should be impossible.
+            raise RuntimeError("reward called on unreachable board")
+        if self.winner is False:
+            return 0  # Your opponent has just won. Bad.
+        if self.winner is None:
+            return 0.5  # Board is a tie
+        # The winner is neither True, False, nor None
+        raise RuntimeError("board has unknown winner type ")
 
 def play_game():
     tree = MCTS_V2()
