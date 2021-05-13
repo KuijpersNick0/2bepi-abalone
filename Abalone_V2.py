@@ -41,7 +41,7 @@ class MCTS_V2:
             raise RuntimeError(f"choose called on terminal {node}")
 
         if node not in self.children:
-            return node.randomPlay(current_player)
+            return node.randomPlay(node.turn)
 
         def score(n):
             if self.N[n] == 0:
@@ -78,7 +78,7 @@ class MCTS_V2:
         #Update le children dict avec les enfants du node
         if node in self.children:
             return #deja dedans
-        self.children[node] = node.legal_plays(current_player)
+        self.children[node] = node.legal_plays(node.turn)
 
     def _simulate(self, node):
         #simule le gain ou pas
@@ -88,7 +88,7 @@ class MCTS_V2:
             if node.is_terminal():
                 winner = node.winner()
                 return 1 - winner if invert_winner else winner
-            node = node.randomPlay(current_player)
+            node = node.randomPlay(node.turn)
             invert_winner = not invert_winner
 
     def _backpropagate(self, path, winner):
@@ -144,12 +144,12 @@ _TTTB = namedtuple("AbaloneBoard", "tup turn winner terminal")
 
 class Board(_TTTB, Node):    
 
-    def tup_to_list(tup):
-        board2 = [list(i) for i in tup]
-        return board2
-    def list_to_tup(list):
-        tup2 = (tuple(i) for i in list)
-        return tup2
+    def tup_to_list(self, tup):
+        self.board = [list(i) for i in tup]
+        return self.board
+    def list_to_tup(self, list):
+        self.tup = (tuple(i) for i in list)
+        return self.tup
 
     #def next_state(self, marblesArray, moveName, player):
     #    self.action(marblesArray, moveName, player, True)
@@ -159,14 +159,15 @@ class Board(_TTTB, Node):
     #        current_player = "W"
     #    return (player, board, (marblesArray,moveName))
 
-    def displayBoard(game):
+    def displayBoard(self):
         """
             Shows the Abalone board.
         """
-        monTuple = game.tup
-        board = game.tup_to_list(monTuple)
+        
+        self.board = self.tup_to_list(self.tup)
+        
         result = "\n\t [ CURRENT BOARD ]\n\n"
-        for index,row in enumerate(board):
+        for index,row in enumerate(self.board):
             if index == 0 or index == 8:
                 result += "        "
             elif index == 1 or index == 7:
@@ -188,7 +189,7 @@ class Board(_TTTB, Node):
     
         print(result)
 
-    def existingDirection(moveName):
+    def existingDirection(self, moveName):
         """
             Checks if the direction exists.
         """
@@ -196,7 +197,7 @@ class Board(_TTTB, Node):
             return False
         return True
 
-    def aligned(vector01, vector02):
+    def aligned(self, vector01, vector02):
         """
             Check if 2 vectors are aligned or not.
         """
@@ -207,12 +208,12 @@ class Board(_TTTB, Node):
     
         return False
 
-    def colored(game, marblesArray, color):
+    def colored(self, marblesArray, color):
         """
         ! FIX BUGS WITH COLOR    
             Checks if all marbles have the right color.
         """
-        board = game.tup_to_list(game.tup) 
+        board = self.tup_to_list(self.tup) 
         for marble in marblesArray:
             if board[marble[0]][marble[1]] != 'W' and board[marble[0]][marble[1]] != 'B':
                 # print("no marble here", marblesArray, marble, board[marble[0]][marble[1]])
@@ -224,7 +225,7 @@ class Board(_TTTB, Node):
 
         return True
 
-    def chain(marblesArray, move=None):
+    def chain(self, marblesArray, move=None):
         """
             Checks if all marbles are aligned.
         """
@@ -237,15 +238,15 @@ class Board(_TTTB, Node):
         marblesArray.sort()
         if move is not None:
             if marblesArray[0] == [marblesArray[1][0] + move[0], marblesArray[1][1] + move[1]]:
-                return chain(marblesArray[1:], move=move)
+                return self.chain(marblesArray[1:], move=move)
 
         for currentMove in moves.values():
             if marblesArray[0] == [marblesArray[1][0] + currentMove[0], marblesArray[1][1] + currentMove[1]]:
-                return chain(marblesArray[1:], move=currentMove)
+                return self.chain(marblesArray[1:], move=currentMove)
     
         return "marblesChainError"
 
-    def lineMove(game, marblesArray, moveName, opponent=False):
+    def lineMove(self, marblesArray, moveName, opponent=False):
         """
             - Checks the chain\n
             - Checks lhe list (more than one marble ?)\n
@@ -258,9 +259,9 @@ class Board(_TTTB, Node):
                     - Next color == 'E' (empty), you can move your chain\n
                     - Next color == opposing color, looks at the opponent chain and checks if the box behind the string is empty or out of board
         """
-        board = game.tup_to_list(game.tup)
+        self.board =self.tup_to_list(self.tup)
         vectorMove = moves[moveName]
-        vectorChain = chain(marblesArray)
+        vectorChain = self.chain(marblesArray)
         lastMarble = marblesArray[0]
 
         if vectorChain == "lengthChainError" or vectorChain == "marblesChainError":
@@ -269,7 +270,7 @@ class Board(_TTTB, Node):
         if vectorChain == None and opponent is False:
             return "soloMarbleInfo", marblesArray, moveName
 
-        if (aligned(vectorMove, vectorChain)):
+        if (self.aligned(vectorMove, vectorChain)):
             if vectorMove == [-1, -1]:
                 lastMarble =  min(marblesArray)
             elif vectorMove == [1, 1]:
@@ -302,9 +303,9 @@ class Board(_TTTB, Node):
                     return False, "outOfLimitError"
 
 
-            currentValue = board[lastMarble[0]][lastMarble[1]]
+            currentValue = self.board[lastMarble[0]][lastMarble[1]]
             try:
-                nextValue = board[lastMarble[0] + vectorMove[0]][lastMarble[1] + vectorMove[1]] 
+                nextValue = self.board[lastMarble[0] + vectorMove[0]][lastMarble[1] + vectorMove[1]] 
             except:
                 return False, "allyOutOfBoardError", marblesArray, moveName
 
@@ -319,10 +320,10 @@ class Board(_TTTB, Node):
                 return True, marblesArray, marblesMoved
             else:
                 try: # ! test [CHECKED]
-                    lastOpponentMarbleValue = board[lastMarble[0] + len(marblesArray) * vectorMove[0]][lastMarble[1] + len(marblesArray) * vectorMove[1]]
+                    lastOpponentMarbleValue = self.board[lastMarble[0] + len(marblesArray) * vectorMove[0]][lastMarble[1] + len(marblesArray) * vectorMove[1]]
                 except:
                     try:
-                        lastOpponentMarbleValue = board[lastMarble[0] + (len(marblesArray) - 1) * vectorMove[0]][lastMarble[1] + (len(marblesArray) - 1) * vectorMove[1]]
+                        lastOpponentMarbleValue = self.board[lastMarble[0] + (len(marblesArray) - 1) * vectorMove[0]][lastMarble[1] + (len(marblesArray) - 1) * vectorMove[1]]
                     except:
                         return False, "outOfRange"
                     
@@ -337,21 +338,21 @@ class Board(_TTTB, Node):
                         marblesMoved.append([marble[0] + vectorMove[0], marble[1] + vectorMove[1]])
 
                     for i in range(1, len(marblesArray)):
-                        opponentValue = board[lastMarble[0] + i * vectorMove[0]][lastMarble[1] + i * vectorMove[1]]
+                        opponentValue = self.board[lastMarble[0] + i * vectorMove[0]][lastMarble[1] + i * vectorMove[1]]
                         if(opponentValue == 'E'):
                             break
                         opponentMarbles.append([lastMarble[0] + i * vectorMove[0], lastMarble[1] + i * vectorMove[1]])
 
                     if len(opponentMarbles) == 1:
-                        game.soloMove(opponentMarbles, moveName, opponent=True)
+                        self.soloMove(opponentMarbles, moveName, opponent=True)
                     else:
-                        game.lineMove(opponentMarbles, moveName, board, opponent=True)
+                        self.lineMove(opponentMarbles, moveName, opponent=True)
 
                     return True, marblesArray, marblesMoved, opponentMarbles, opponentMarblesMoved
                 
         return False, "nonAlignedError", marblesArray, moveName
 
-    def arrowMove(game, marblesArray, moveName, opponent=False):
+    def arrowMove(self, marblesArray, moveName, opponent=False):
         """
             - Checks the list only one marble ?)\n
             - Iterates the list\n
@@ -363,15 +364,15 @@ class Board(_TTTB, Node):
             For each marbles, if the next box is 'E' or the opposing color (with an empty box behind), you can move your chain !
         """
 
-        board = game.tup_to_list(game.tup)
+        self.board = self.tup_to_list(self.tup)
         updatedMarbles = []
         if len(marblesArray) == 1:
             return "singleMarbleInfo", marblesArray, moveName
 
         for marble in marblesArray:
             if ((moveName.__contains__('S') and marble[0] != 8) or (moveName.__contains__('N') and marble[0] != 0)) and ((moveName.__contains__('W') and marble[1] != 0) or (moveName.__contains__('E') and marble[1] != 8)): 
-                nextMarbleValue = board[marble[0] + moves[moveName][0]][marble[1] + moves[moveName][1]]
-                currentMarbleValue = board[marble[0]][marble[1]]
+                nextMarbleValue = self.board[marble[0] + moves[moveName][0]][marble[1] + moves[moveName][1]]
+                currentMarbleValue = self.board[marble[0]][marble[1]]
                 if nextMarbleValue == currentMarbleValue:
                     return False, "allyPresenceError", marblesArray, moveName
                 elif nextMarbleValue == 'X':
@@ -392,7 +393,7 @@ class Board(_TTTB, Node):
     
         return False, "notAnArrowMoveError"
 
-    def soloMove(game, marblesArray, moveName, opponent=False):
+    def soloMove(self, marblesArray, moveName, opponent=False):
         """
             - Checks the # of marbles in list\n
             - Checks the next box\n
@@ -403,13 +404,13 @@ class Board(_TTTB, Node):
             \n
             So if the next box is 'E', you can move your marble and update your board !
         """
-        board = game.tup_to_list(game.tup)
+        self.board = self.tup_to_list(self.tup)
         if len(marblesArray) == 1:
-            currentValue = board[marblesArray[0][0]][marblesArray[0][1]]
+            currentValue = self.board[marblesArray[0][0]][marblesArray[0][1]]
             try:
-                nextValue = board[marblesArray[0][0] + moves[moveName][0]][marblesArray[0][1] + moves[moveName][1]]
+                nextValue = self.board[marblesArray[0][0] + moves[moveName][0]][marblesArray[0][1] + moves[moveName][1]]
             except:
-                nextValue = board[marblesArray[0][0]][marblesArray[0][1]]
+                nextValue = self.board[marblesArray[0][0]][marblesArray[0][1]]
 
             if nextValue == 'X':
                 return False, "outLimitError"
@@ -425,21 +426,21 @@ class Board(_TTTB, Node):
     
         return False, "notAsingleMarbleError"
 
-    def updateBoard(game, oldPositions, newPositions):
+    def updateBoard(self, oldPositions, newPositions):
         """
             Adds changes into the last board.
         """
-        board = game.tup_to_list(game.tup)
+        self.board = self.tup_to_list(self.tup)
 
-        color = board[oldPositions[0][0]][oldPositions[0][1]]
+        color = self.board[oldPositions[0][0]][oldPositions[0][1]]
 
         for marble in oldPositions:
-            board[marble[0]][marble[1]] = 'E'
+            self.board[marble[0]][marble[1]] = 'E'
     
         for marble in newPositions:
-            board[marble[0]][marble[1]] = f"{color}"
+            self.board[marble[0]][marble[1]] = f"{color}"
 
-    def action(game, marblesArray, moveName, color, update=False):
+    def action(self, marblesArray, moveName, color, update=False):
         """
             - Checks the marble's color\n
             - Checks the direction existence\n
@@ -449,20 +450,20 @@ class Board(_TTTB, Node):
             \t- If arrowMove returns an error, tries making a soloMove\n
             - If lineMove, arrowMove and soloMove return errors, the program returns False
         """
-        board = game.tup_to_list(game.tup)
-        if game.colored(marblesArray, color) is not True:
+        self.board = self.tup_to_list(self.tup)
+        if self.colored(marblesArray, color) is not True:
             # print(f"color error : '{color}'")
             return False
 
-        if existingDirection(moveName) is False:
+        if self.existingDirection(moveName) is False:
             # print(f"direction error : '{moveName}'")
             return False
 
-        if chain(marblesArray) != "lengthChainError" and chain(marblesArray) != "marblesChainError":
+        if self.chain(marblesArray) != "lengthChainError" and self.chain(marblesArray) != "marblesChainError":
         
-            lm = game.lineMove(marblesArray, moveName)
-            am = game.arrowMove(marblesArray, moveName)
-            sm = game.soloMove(marblesArray, moveName)
+            lm = self.lineMove(marblesArray, moveName)
+            am = self.arrowMove(marblesArray, moveName)
+            sm = self.soloMove(marblesArray, moveName)
             if lm[0] is not True:
                 if am[0] is not True:
                     if sm[0] is not True:
@@ -472,21 +473,21 @@ class Board(_TTTB, Node):
                         return False
                     else:
                         # print("solo move")
-                        game.updateBoard(sm[1], sm[2]) if update == True else None
+                        self.updateBoard(sm[1], sm[2]) if update == True else None
                 else:
                     # print("arrow move")
-                    game.updateBoard(am[1], am[2]) if update == True else None
+                    self.updateBoard(am[1], am[2]) if update == True else None
             else:
                 # print("line move")
-                game.updateBoard(lm[3], lm[4]) if (len(lm) == 4) and update == True else None
-                game.updateBoard(lm[1], lm[2]) if update == True else None
+                self.updateBoard(lm[3], lm[4]) if (len(lm) == 4) and update == True else None
+                self.updateBoard(lm[1], lm[2]) if update == True else None
     
             return moveName
     
         return False
 
-    def possibleChainsFromPoint(game, lengthChain, referenceMarble, currentMarble=None, move=None, chain=[], chainsList=[], possibleDirections=list(moves.values())):    
-        board = game.tup_to_list(game.tup)
+    def possibleChainsFromPoint(self, lengthChain, referenceMarble, currentMarble=None, move=None, chain=[], chainsList=[], possibleDirections=list(moves.values())):    
+        self.board = self.tup_to_list(self.tup)
         if currentMarble is None:
             currentMarble = referenceMarble
     
@@ -501,9 +502,9 @@ class Board(_TTTB, Node):
         elif lengthChain == len(chain):
             chainsList.append(chain)
             possibleDirections.remove(move)
-            return game.possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
+            return self.possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
 
-        color = board[referenceMarble[0]][referenceMarble[1]]
+        color = self.board[referenceMarble[0]][referenceMarble[1]]
 
         if move is None:
             for myMove in possibleDirections:
@@ -511,23 +512,23 @@ class Board(_TTTB, Node):
                 previousMarble = [currentMarble[0] - myMove[0], currentMarble[1] - myMove[1]]
             
                 if ((previousMarble[0] != -1 and previousMarble[0] != 9) and (previousMarble[1] != -1 and previousMarble[1] != 9)) and ((nextMarble[0] != -1 and nextMarble[0] != 9) and (nextMarble[1] != -1 and nextMarble[1] != 9)):
-                    nextMarbleColor = board[nextMarble[0]][nextMarble[1]]
-                    previousMarbleColor = board[previousMarble[0]][previousMarble[1]]
+                    nextMarbleColor = self.board[nextMarble[0]][nextMarble[1]]
+                    previousMarbleColor = self.board[previousMarble[0]][previousMarble[1]]
                     if previousMarbleColor == color and nextMarbleColor == color:
                         doubleNeighbourChain = [previousMarble, currentMarble, nextMarble]
                         doubleNeighbourChain.sort()
                         if chainsList.__contains__(doubleNeighbourChain) is not True and lengthChain == 3:
                             chainsList.append(doubleNeighbourChain)
-                            return game.possibleChainsFromPoint(lengthChain, referenceMarble, None, myMove, [], chainsList, possibleDirections)
-                        return game.possibleChainsFromPoint(lengthChain, referenceMarble, None, myMove, chain, chainsList, possibleDirections)
+                            return self.possibleChainsFromPoint(lengthChain, referenceMarble, None, myMove, [], chainsList, possibleDirections)
+                        return self.possibleChainsFromPoint(lengthChain, referenceMarble, None, myMove, chain, chainsList, possibleDirections)
 
                 if nextMarble[0] != -1 and nextMarble[0] != 9 and nextMarble[1] != -1 and nextMarble[1] != 9:
-                    nextMarbleColor = board[nextMarble[0]][nextMarble[1]]  
+                    nextMarbleColor = self.board[nextMarble[0]][nextMarble[1]]  
                     if nextMarbleColor == color:
-                        return game.possibleChainsFromPoint(lengthChain, referenceMarble, currentMarble, myMove, chain, chainsList, possibleDirections)
+                        return self.possibleChainsFromPoint(lengthChain, referenceMarble, currentMarble, myMove, chain, chainsList, possibleDirections)
                 else:
                     possibleDirections.remove(myMove)
-                    return game.possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
+                    return self.possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
             if len(chainsList) > 0:
                 chainsList.sort()
                 return chainsList
@@ -536,27 +537,27 @@ class Board(_TTTB, Node):
         else:
             nextMarble = [currentMarble[0] + move[0], currentMarble[1] + move[1]]
             if (nextMarble[0] != -1 and nextMarble[0] != 9) and (nextMarble[1] != -1 and nextMarble[1] != 9):
-                nextMarbleColor = board[nextMarble[0]][nextMarble[1]]
+                nextMarbleColor = self.board[nextMarble[0]][nextMarble[1]]
 
                 if nextMarbleColor == color:
                     chain.append(nextMarble)
-                    return game.possibleChainsFromPoint(lengthChain, referenceMarble, nextMarble, move, chain, chainsList, possibleDirections)
+                    return self.possibleChainsFromPoint(lengthChain, referenceMarble, nextMarble, move, chain, chainsList, possibleDirections)
             
             previousMarble = [referenceMarble[0] - move[0], referenceMarble[1] - move[1]]
             if (previousMarble[0] != -1 and previousMarble[0] != 9) and (previousMarble[1] != -1 and previousMarble[1] != 9):
-                previousMarbleColor = board[previousMarble[0]][previousMarble[1]]
+                previousMarbleColor = self.board[previousMarble[0]][previousMarble[1]]
 
                 if previousMarbleColor == color:
                     chain.append(previousMarble)
                     chain.sort()
                     if chainsList.__contains__(chain) is not True and len(chain) == lengthChain:
                         chainsList.append(chain)
-                        return game.possibleChainsFromPoint(lengthChain, referenceMarble, previousMarble, move, [], chainsList, possibleDirections)
+                        return self.possibleChainsFromPoint(lengthChain, referenceMarble, previousMarble, move, [], chainsList, possibleDirections)
 
             possibleDirections.remove(move)
-            return game.possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
+            return self.possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
 
-    def randomPlay(game, color):
+    def randomPlay(self, color):
         """
             Choose one random chain with one random move in the board.\n
             The method returns :
@@ -566,33 +567,33 @@ class Board(_TTTB, Node):
                 - the chain built from this marble
                 - the move
         """
-        board = game.tup_to_list(game.tup)
+        self.board = self.tup_to_list(self.tup)
         randomLength = random.choice((1,2,3))
         chosenBoxes = []
         myMoves = list(moves.keys())
 
-        for i,row in enumerate(board):
+        for i,row in enumerate(self.board):
             for j,value in enumerate(row):
                 if value == color:
                     chosenBoxes.append([i,j])
     
         randomMarble = random.choice(chosenBoxes)
-        chains = game.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+        chains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
         randomMove = random.choice(myMoves)
     
-        possibleChains = game.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+        possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
     
         while possibleChains == "notMoveFoundError":
             if len(chosenBoxes) > 1:
                 chosenBoxes.remove(randomMarble)
                 randomMarble = random.choice(chosenBoxes)
-                possibleChains = game.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+                possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
             else:
                 # print("no marbles")
                 return False
     
         randomChain = random.choice(possibleChains)
-        a = game.action(randomChain, randomMove, color, False)
+        a = self.action(randomChain, randomMove, color, False)
 
         while a is False:
             if myMoves != []:
@@ -602,28 +603,28 @@ class Board(_TTTB, Node):
                 if len(chosenBoxes) > 1:
                     chosenBoxes.remove(randomMarble)
                     randomMarble = random.choice(chosenBoxes)
-                    possibleChains = game.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+                    possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
                     while possibleChains == "notMoveFoundError":
                         if len(chosenBoxes) > 1:
                             chosenBoxes.remove(randomMarble)
                             randomMarble = random.choice(chosenBoxes)
-                            possibleChains = game.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+                            possibleChains = self.possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
                         else:
                             return False
                     randomChain = random.choice(possibleChains)
                 elif len(chosenBoxes) == 1:
-                    possibleChain =  game.possibleChainsFromPoint(randomLength, chosenBoxes[0], None, None, [], [], list(moves.values()))
+                    possibleChain =  self.possibleChainsFromPoint(randomLength, chosenBoxes[0], None, None, [], [], list(moves.values()))
                     chosenBoxes.remove(randomMarble)
                 else:
                     return False
-            a = game.action(randomChain, randomMove, color, True)
+            a = self.action(randomChain, randomMove, color, True)
     
         return color, randomChain, a
         
-    def opposingMarblesOut(game, yourColor):
+    def opposingMarblesOut(self, yourColor):
         counter = 0
         opposingColor = ''
-        board = game.tup_to_list(game.tup)
+        self.board = self.tup_to_list(self.tup)
         # ! COMMENT FAIRE CETTE CONDITION TERNAIRE ?
         # opposingColor = 'W' if(yourColor == 'B') else opposingColor = 'B'
 
@@ -632,81 +633,88 @@ class Board(_TTTB, Node):
         else:
             opposingColor = 'B'
 
-        for row in board:
+        for row in self.board:
             for box in row:
                 if box == opposingColor:
                     counter += 1
     
         return 14 - counter
 
-    def legal_plays(game, player):
-        board = game.tup_to_list(game.tup)
+    def legal_plays(self, player):
+        self.board = self.tup_to_list(self.tup)
+
         allMoves = []      
         chosenBoxes = []
         myMoves = list(moves.keys())
         lengthChains = 2
+        
 
-        if game.terminal:  # If the game is finished then no moves can be made
+        if self.terminal:  # If the game is finished then no moves can be made
             return set()
     
-        for i,row in enumerate(board):
+        for i,row in enumerate(self.board):
             for j,value in enumerate(row):
                 if value == player:
                     chosenBoxes.append([i,j])                    
 
         for i in range(lengthChains):
             for j in chosenBoxes:
-                possibleChains = game.possibleChainsFromPoint(i, j, None, None, [], [], possibleDirections=list(moves.values())) 
+                possibleChains = self.possibleChainsFromPoint(i, j, None, None, [], [], possibleDirections=list(moves.values())) 
                
         for i in possibleChains:
             for j in myMoves:
-                if game.action(i, j, player, False) != False:                    
+                if self.action(i, j, player, False) != False:                    
                     allMoves.append((i,j))
-        return {game.find_children(i) for i in allMoves}
+        return {self.find_children(i) for i in allMoves}
     
-    def find_children(game, moveA):
-        board = game.tup_to_list(game.tup)
-        game.action(moveA[0], moveA[1], current_player, board, True)
-        newTup = game.list_to_tup(board)     
-        winner = game.winner(current_player, board)
-        turn = current_player
-        if current_player == "W":
-            current_player = "B"
-        elif current_player == "B":
-            current_player = "W"        
+    def find_children(self, moveA):
+        self.board = self.tup_to_list(self.tup)
+        self.action(moveA[0], moveA[1], self.turn, True)
+        newTup = self.list_to_tup(self.board)     
+        winner = self.winner(self.turn, self.board)
+        turn2 = self.turn
+        if self.turn == "W":
+            self.turn = "B"
+        elif self.turn == "B":
+            self.turn = "W"        
         is_terminal = winner is not None
-        return Board(newTup, turn, winner, is_terminal)
+        return Board(newTup, turn2, winner, is_terminal)
 
-    def find_random_child(game):
+    def find_random_child(self):
         if game.terminal:
             return None  # If the game is finished then no moves can be made
-        board = game.tup_to_list(game.tup)
-        game.randomPlay(current_player, board)
-        newTup = game.list_to_tup(board)     
-        winner = game.winner(current_player, board)
-        turn = current_player
-        if current_player == "W":
-            current_player = "B"
-        elif current_player == "B":
-            current_player = "W"        
+        self.board = self.tup_to_list(self.tup)
+        self.randomPlay(self.turn)
+        newTup = self.list_to_tup(self.board)     
+        winner = self.winner(self.turn, self.board)
+        turn2 = self.turn
+        if self.turn == "W":
+            self.turn = "B"
+        elif self.turn == "B":
+            self.turn = "W"        
         is_terminal = winner is not None
-        return Board(newTup, turn, winner, is_terminal)
+        return Board(newTup, turn2, winner, is_terminal)
 
-    def is_terminal(game):                
-        return game.terminal
+    def is_terminal(self):                
+        return self.terminal
 
-    def winner(game):
+    def winner(self):
 
-        if not game.terminal:
+        if not self.terminal:
             raise RuntimeError(f"reward called on nonterminal board {board}")
 
-        scoreWhite = game.opposingMarblesOut('B')
-        scoreBlack = game.opposingMarblesOut('W')
+        scoreWhite = self.opposingMarblesOut('B')
+        scoreBlack = self.opposingMarblesOut('W')
+        
 
-        if scoreBlack == 6:
-            return False
-        elif scoreWhite == 6:
+        if scoreBlack == 6 & self.turn == "W":
             return True
+        elif scoreBlack == 6 & self.turn == "B":
+            return False
+        elif scoreWhite == 6 & self.turn == "B":
+            return True
+        elif scoreWhite == 6 & self.turn == "W":
+            return False
 
         return None
 
@@ -719,7 +727,7 @@ def play_game():
         print(game.displayBoard())
         for _ in range(50):
             tree.do_rollout(game)
-            game.displayBoard(board)
+            game.displayBoard()
         game = tree.choose(game)         
         games+=1
         print(games)
