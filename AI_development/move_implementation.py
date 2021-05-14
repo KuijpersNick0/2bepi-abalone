@@ -74,14 +74,15 @@ def colored(marblesArray, color):
     ! FIX BUGS WITH COLOR    
         Checks if all marbles have the right color.
     """
+    if color != 'W' and color != 'B':
+        return False
+
     for marble in marblesArray:
         if board[marble[0]][marble[1]] != 'W' and board[marble[0]][marble[1]] != 'B':
-            # print("no marble here", marblesArray, marble, board[marble[0]][marble[1]])
-            return "caseWithoutMarbleError"
+            return False
         else:
             if board[marble[0]][marble[1]] != color:
-                # print("wrong color marble")
-                return "wrongColorError"
+                return False
 
     return True
 
@@ -89,24 +90,29 @@ def chain(marblesArray, move=None):
     """
         Checks if all marbles are aligned.
     """
-    if len(marblesArray) > 3:
-        return "lengthChainError"
-    
+
     if len(marblesArray) == 1:
         return move
-
+        
     marblesArray.sort()
+    color = board[marblesArray[0][0]][marblesArray[0][1]]
+    
+    if len(marblesArray) > 3:
+        return False
+    elif not colored(marblesArray, color):
+        return False
+
     if move is not None:
         if marblesArray[0] == [marblesArray[1][0] + move[0], marblesArray[1][1] + move[1]]:
             return chain(marblesArray[1:], move=move)
 
     for currentMove in moves.values():
-        if marblesArray[0] == [marblesArray[1][0] + currentMove[0], marblesArray[1][1] + currentMove[1]]:
+        if [marblesArray[0][0] + currentMove[0], marblesArray[0][1] + currentMove[1]] == marblesArray[1]:
             return chain(marblesArray[1:], move=currentMove)
     
-    return "marblesChainError"
+    return False
 
-def lineMove(marblesArray, moveName, opponent=False):
+def lineMove(marblesArray, moveName):
     """
         - Checks the chain\n
         - Checks lhe list (more than one marble ?)\n
@@ -123,11 +129,16 @@ def lineMove(marblesArray, moveName, opponent=False):
     vectorChain = chain(marblesArray)
     lastMarble = marblesArray[0]
 
-    if vectorChain == "lengthChainError" or vectorChain == "marblesChainError":
-        return False, "chainError", marblesArray, moveName
+    # if vectorChain:
+    #     return False, "chainError", marblesArray, moveName
+
+    if vectorChain is False:
+        return False
+    elif len(marblesArray) == 1:
+        return False
     
-    if vectorChain == None and opponent is False:
-        return "soloMarbleInfo", marblesArray, moveName
+    # if vectorChain == None and opponent is False:
+    #     return "soloMarbleInfo", marblesArray, moveName
 
     if (aligned(vectorMove, vectorChain)):
         if vectorMove == [-1, -1]:
@@ -152,31 +163,38 @@ def lineMove(marblesArray, moveName, opponent=False):
                     lastMarble = marble
     
         if len(marblesArray) == 3 and (lastMarble[0] == 0 or lastMarble[1] == 0 or lastMarble[0] == 8 or lastMarble[1] == 8):
-            return False, "outOfLimitError", marblesArray, moveName
+            # return False, "outOfLimitError", marblesArray, moveName
+            return False
 
         marblesArray.sort()
         if len(marblesArray) == 2:
             if (marblesArray[0][0] == 0 or marblesArray[0][1] == 0) and (moveName == "NE" or moveName == "NW"):
-                return False, "outOfLimitError"
+                # return False, "outOfLimitError"
+                return False
             elif (marblesArray[-1][0] == 8 or marblesArray[-1][1] == 8) and (moveName == "SE" or moveName == "SW"):
-                return False, "outOfLimitError"
+                # return False, "outOfLimitError"
+                return False
 
 
         currentValue = board[lastMarble[0]][lastMarble[1]]
         try:
             nextValue = board[lastMarble[0] + vectorMove[0]][lastMarble[1] + vectorMove[1]] 
         except:
-            return False, "allyOutOfBoardError", marblesArray, moveName
+            # return False, "allyOutOfBoardError", marblesArray, moveName
+            return False
 
         if nextValue == 'X':
-            return False, "outLimitError", marblesArray, moveName
+            # return False, "outLimitError", marblesArray, moveName
+            return False
         elif nextValue == currentValue:
-            return False, "sameValueError", marblesArray, moveName
+            # return False, "sameValueError", marblesArray, moveName
+            return False
         elif nextValue == 'E':
             marblesMoved = []
             for marble in marblesArray:
                 marblesMoved.append([marble[0] + vectorMove[0], marble[1] + vectorMove[1]])
             return True, marblesArray, marblesMoved
+            # return True
         else:
             try: # ! test [CHECKED]
                 lastOpponentMarbleValue = board[lastMarble[0] + len(marblesArray) * vectorMove[0]][lastMarble[1] + len(marblesArray) * vectorMove[1]]
@@ -184,10 +202,12 @@ def lineMove(marblesArray, moveName, opponent=False):
                 try:
                     lastOpponentMarbleValue = board[lastMarble[0] + (len(marblesArray) - 1) * vectorMove[0]][lastMarble[1] + (len(marblesArray) - 1) * vectorMove[1]]
                 except:
-                    return False, "outOfRange"
+                    # return False, "outOfRange"
+                    return False
                     
             if lastOpponentMarbleValue != 'E' and lastOpponentMarbleValue == 'X':
-                return False, "NonEmptyError", marblesArray, moveName
+                # return False, "NonEmptyError", marblesArray, moveName
+                return False
             else:
                 marblesMoved = []
                 opponentMarbles = []
@@ -203,13 +223,15 @@ def lineMove(marblesArray, moveName, opponent=False):
                     opponentMarbles.append([lastMarble[0] + i * vectorMove[0], lastMarble[1] + i * vectorMove[1]])
 
                 if len(opponentMarbles) == 1:
-                    soloMove(opponentMarbles, moveName, opponent=True)
+                    soloMove(opponentMarbles, moveName)
                 else:
-                    lineMove(opponentMarbles, moveName, opponent=True)
+                    lineMove(opponentMarbles, moveName)
 
                 return True, marblesArray, marblesMoved, opponentMarbles, opponentMarblesMoved
+                # return True
                 
-    return False, "nonAlignedError", marblesArray, moveName
+    # return False, "nonAlignedError", marblesArray, moveName
+    return False
 
 def arrowMove(marblesArray, moveName, opponent=False):
     """
@@ -224,31 +246,37 @@ def arrowMove(marblesArray, moveName, opponent=False):
     """
     updatedMarbles = []
     if len(marblesArray) == 1:
-        return "singleMarbleInfo", marblesArray, moveName
+        False
 
     for marble in marblesArray:
         if ((moveName.__contains__('S') and marble[0] != 8) or (moveName.__contains__('N') and marble[0] != 0)) and ((moveName.__contains__('W') and marble[1] != 0) or (moveName.__contains__('E') and marble[1] != 8)): 
             nextMarbleValue = board[marble[0] + moves[moveName][0]][marble[1] + moves[moveName][1]]
             currentMarbleValue = board[marble[0]][marble[1]]
             if nextMarbleValue == currentMarbleValue:
-                return False, "allyPresenceError", marblesArray, moveName
+                # return False, "allyPresenceError", marblesArray, moveName
+                return False
             elif nextMarbleValue == 'X':
-                return False, "outLimitError", marblesArray, moveName
+                # return False, "outLimitError", marblesArray, moveName
+                return False
             elif nextMarbleValue == 'E':
                 pass
             else:
                 try:
                     if board[marble[0] + 2 * moves[moveName][0]][marble[1] + 2 * moves[moveName][1]] == nextMarbleValue:
-                        return False, "opponentMoveError", marblesArray, moveName
+                        # return False, "opponentMoveError", marblesArray, moveName
+                        return False
                 except:
-                    return False, "outOfRange"
+                    # return False, "outOfRange"
+                    return False
 
             updatedMarbles.append([marble[0] + moves[moveName][0], marble[1] + moves[moveName][1]])
     
     if len(updatedMarbles) != 0:
         return True, marblesArray, updatedMarbles
+        # return True
     
-    return False, "notAnArrowMoveError"
+    # return False, "notAnArrowMoveError"
+    return False
 
 def soloMove(marblesArray, moveName, opponent=False):
     """
@@ -269,18 +297,23 @@ def soloMove(marblesArray, moveName, opponent=False):
             nextValue = board[marblesArray[0][0]][marblesArray[0][1]]
 
         if nextValue == 'X':
-            return False, "outLimitError"
+            # return False, "outLimitError"
+            return False
         elif nextValue == currentValue:
-            return False, "allyPresenceError"
+            # return False, "allyPresenceError"
+            return False
         elif nextValue == 'E':
             pass
         else:
-            return False, "opponentMoveError"
+            # return False, "opponentMoveError"
+            return False
 
         marbleMoved = [[marblesArray[0][0] + moves[moveName][0], marblesArray[0][1] + moves[moveName][1]]]
         return True, marblesArray, marbleMoved
+        # return True
     
-    return False, "notAsingleMarbleError"
+    # return False, "notAsingleMarbleError"
+    return False
 
 def updateBoard(oldPositions, newPositions):
     """
@@ -304,26 +337,27 @@ def action(marblesArray, moveName, color, update=False):
         \t- If arrowMove returns an error, tries making a soloMove\n
         - If lineMove, arrowMove and soloMove return errors, the program returns False
     """
+
     if colored(marblesArray, color) is not True:
         # print(f"color error : '{color}'")
-        return False
+        return False, None
 
     if existingDirection(moveName) is False:
         # print(f"direction error : '{moveName}'")
-        return False
+        return False, None
 
     if chain(marblesArray) != "lengthChainError" and chain(marblesArray) != "marblesChainError":
         
         lm = lineMove(marblesArray, moveName)
         am = arrowMove(marblesArray, moveName)
         sm = soloMove(marblesArray, moveName)
-        if lm[0] is not True:
-            if am[0] is not True:
-                if sm[0] is not True:
+        if lm is False:
+            if am is False:
+                if sm is False:
                     # print(f"lineMove  : {lm}")
                     # print(f"arrowMove : {am}")
                     # print(f"soloMove  : {sm}")
-                    return False
+                    return False, None
                 else:
                     # print("solo move")
                     updateBoard(sm[1], sm[2]) if update == True else None
@@ -335,41 +369,44 @@ def action(marblesArray, moveName, color, update=False):
             updateBoard(lm[3], lm[4]) if (len(lm) == 4) and update == True else None
             updateBoard(lm[1], lm[2]) if update == True else None
     
-        return moveName
+        return True, moveName
+        # return True
     
-    return False
+    return False, None
 
 def possibleChainsFromPoint(lengthChain, referenceMarble, currentMarble=None, move=None, chain=[], chainsList=[], possibleDirections=list(moves.values())):    
-    if currentMarble is None:
+    if currentMarble is None: # Vérifie si c'est la première boucle de la récursivité
         currentMarble = referenceMarble
     
-    if len(chain) == 0:
+    if len(chain) == 0: # Vérifie si c'est la première boucle de la récursivité
         chain.append(currentMarble)
     
     chain.sort()
 
-    if lengthChain == 1:
+    if lengthChain == 1: # Si la chaîne ne doit posséder qu'un seul élément
         chainsList.append(chain)
-        return chainsList
-    elif lengthChain == len(chain):
-        chainsList.append(chain)
-        possibleDirections.remove(move)
-        return possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
+        return True, chainsList
+    elif lengthChain == len(chain): # Si la chaîne a atteint la longueur désirée
+        chainsList.append(chain) # Ajouter à la liste de chaînes possibles
+        possibleDirections.remove(move) # Enlever le move utilisé
+        return possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections) # Refaire l'opération mais avec un move en moins
 
     color = board[referenceMarble[0]][referenceMarble[1]]
 
-    if move is None:
+    if move is None: # S'il n'y a pas encore de move choisi
         for myMove in possibleDirections:
-            nextMarble = [currentMarble[0] + myMove[0], currentMarble[1] + myMove[1]]
-            previousMarble = [currentMarble[0] - myMove[0], currentMarble[1] - myMove[1]]
+            nextMarble = [currentMarble[0] + myMove[0], currentMarble[1] + myMove[1]] # Regarder le pion suivant avec le move actuel
+            previousMarble = [currentMarble[0] - myMove[0], currentMarble[1] - myMove[1]] # Regarder le pion précédent avec le move actuel
             
+            # Vérifie si les pions limitrophes ne dépassent pas les limites du plateau de jeu
             if ((previousMarble[0] != -1 and previousMarble[0] != 9) and (previousMarble[1] != -1 and previousMarble[1] != 9)) and ((nextMarble[0] != -1 and nextMarble[0] != 9) and (nextMarble[1] != -1 and nextMarble[1] != 9)):
-                nextMarbleColor = board[nextMarble[0]][nextMarble[1]]
-                previousMarbleColor = board[previousMarble[0]][previousMarble[1]]
-                if previousMarbleColor == color and nextMarbleColor == color:
+                nextMarbleColor = board[nextMarble[0]][nextMarble[1]] # Enregistrer la couleur du pion précédent
+                previousMarbleColor = board[previousMarble[0]][previousMarble[1]] # Enregistrer la couleur du pion suivant
+                
+                if previousMarbleColor == color and nextMarbleColor == color: # Si les deux pions limitrophes possèdent la même couleur que celle du pion de référence
                     doubleNeighbourChain = [previousMarble, currentMarble, nextMarble]
                     doubleNeighbourChain.sort()
-                    if chainsList.__contains__(doubleNeighbourChain) is not True and lengthChain == 3:
+                    if chainsList.__contains__(doubleNeighbourChain) is not True and lengthChain == 3: # Vérifie si la liste de chaînes ne possède pas déjà cette dernière et si la longueur souhaitée est 3
                         chainsList.append(doubleNeighbourChain)
                         return possibleChainsFromPoint(lengthChain, referenceMarble, None, myMove, [], chainsList, possibleDirections)
                     return possibleChainsFromPoint(lengthChain, referenceMarble, None, myMove, chain, chainsList, possibleDirections)
@@ -383,9 +420,9 @@ def possibleChainsFromPoint(lengthChain, referenceMarble, currentMarble=None, mo
                 return possibleChainsFromPoint(lengthChain, referenceMarble, None, None, [], chainsList, possibleDirections)
         if len(chainsList) > 0:
             chainsList.sort()
-            return chainsList
+            return True, chainsList
 
-        return "notMoveFoundError"
+        return False
     else:
         nextMarble = [currentMarble[0] + move[0], currentMarble[1] + move[1]]
         if (nextMarble[0] != -1 and nextMarble[0] != 9) and (nextMarble[1] != -1 and nextMarble[1] != 9):
@@ -419,61 +456,113 @@ def randomPlay(color):
             - the chain built from this marble
             - the move
     """
-    randomLength = random.choice((1,2,3))
+    possibleLengths = [1, 2, 3]
+    randomLength = random.choice(possibleLengths)
     chosenBoxes = []
     myMoves = list(moves.keys())
 
-    for i,row in enumerate(board):
+    for i,row in enumerate(board): # Ajoute à une liste tous les éléments qui correspondent à la couleur choisie
         for j,value in enumerate(row):
             if value == color:
                 chosenBoxes.append([i,j])
     
-    randomMarble = random.choice(chosenBoxes)
-    chains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
-    randomMove = random.choice(myMoves)
-    
-    possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
-    
-    while possibleChains == "notMoveFoundError":
-        if len(chosenBoxes) > 1:
-            chosenBoxes.remove(randomMarble)
-            randomMarble = random.choice(chosenBoxes)
-            possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
-        else:
-            # print("no marbles")
-            return False
-    
+    print(chosenBoxes)
+    randomMarble = random.choice(chosenBoxes) # Sélectionne un pion aléatoire parmi la liste créée
+    randomMove = random.choice(myMoves) # Choisi un mouvement aléatoire    
+    possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))[1] # Retourne l'ensemble des chaînes possible à partir d'une coordonnée et d'une longueur
     randomChain = random.choice(possibleChains)
-    a = action(randomChain, randomMove, color, False)
-
-    while a is False:
-        if myMoves != []:
-            randomMove = random.choice(myMoves)
-            myMoves.remove(randomMove)
-        else:
-            if len(chosenBoxes) > 1:
-                chosenBoxes.remove(randomMarble)
-                randomMarble = random.choice(chosenBoxes)
-                possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
-                while possibleChains == "notMoveFoundError":
-                    if len(chosenBoxes) > 1:
-                        chosenBoxes.remove(randomMarble)
-                        randomMarble = random.choice(chosenBoxes)
-                        possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
-                    else:
-                        return False
-                randomChain = random.choice(possibleChains)
-            elif len(chosenBoxes) == 1:
-                possibleChain =  possibleChainsFromPoint(randomLength, chosenBoxes[0], None, None, [], [], list(moves.values()))
-                chosenBoxes.remove(randomMarble)
-            else:
-                return False
-        a = action(randomChain, randomMove, color, True)
     
-    return color, randomChain, a
+    act = action(randomChain, randomMove, color, True)
+    while act[0] is False:
+        if len(myMoves) > 1:
+            myMoves.remove(randomMove)
+            print("MOVE DISPO : ")
+            randomMove = random.choice(myMoves)
+        elif len(myMoves) == 1:
+            if len(possibleChains) > 1:
+                possibleChains.remove(randomChain)
+                print("CHAINES DISPO : ", possibleChains)
+                randomChain = random.choice(possibleChains)
+            elif len(possibleChains) == 1:
+                if len(chosenBoxes) > 1:
+                    chosenBoxes.remove(randomMarble)
+                    print("PIONS DISPO : ", chosenBoxes)
+                    randomMarble = random.choice(chosenBoxes)
+                elif len(chosenBoxes) == 1:
+                    print(chosenBoxes)
+                    return "SUMITO"
         
+        act = action(randomChain, randomMove, color, True)
+
+    """
+        Si avec la longueur indiquée il n'y a pas de mouvement possible pour le pion, prendre une autre longueur
+        Après avoir pris toutes les longueurs, s'il n'y a toujours pas de mouvement disponibles, changer de pion
+        Après avoir regardés tous les pions, s'il n'y a plus de mouvements possible sur le plateau SUMITO
+    """
+
+    # if possibleChains is False:
+    #     print("FPINEROGNEROBUE___________________ETGBOTBGIOJJ ")
+    #     # raise Exception()
+    #     if len(possibleLengths) > 0:
+    #         possibleLengths.remove(randomLength)
+    #         randomLength = random.choice(possibleLengths)
+    #         possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+    #     elif len(possibleLengths) == 0:
+    #         if len(chosenBoxes) > 0:
+    #             possibleLengths = [1, 2, 3]
+    #             randomLength = random.choice(possibleLengths)
+    #             chosenBoxes.remove(randomMarble)
+    #             randomMarble = random.choice(chosenBoxes)
+    #             possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+    #         elif len(chosenBoxes) == 0:
+    #             print("SUMITO")
+    #             return False
+
+    return act
+
+    # randomChain = random.choice(possibleChains)
+    # act = action(randomChain, randomMove, color, True)
 
 
+    # while possibleChains is False:
+    #     if len(chosenBoxes) > 1:
+    #         chosenBoxes.remove(randomMarble)
+    #         randomMarble = random.choice(chosenBoxes)
+    #         # possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+    #         return possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+    #     else:
+    #         # print("no marbles")
+    #         return False
+    
+    # randomChain = random.choice(possibleChains)
+    # a = action(randomChain, randomMove, color, False)
+
+    # while a is False:
+    #     if myMoves != []:
+    #         randomMove = random.choice(myMoves)
+    #         myMoves.remove(randomMove)
+    #     else:
+    #         if len(chosenBoxes) > 1:
+    #             chosenBoxes.remove(randomMarble)
+    #             randomMarble = random.choice(chosenBoxes)
+    #             possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+    #             while possibleChains is False:
+    #                 if len(chosenBoxes) > 1:
+    #                     chosenBoxes.remove(randomMarble)
+    #                     randomMarble = random.choice(chosenBoxes)
+    #                     possibleChains = possibleChainsFromPoint(randomLength, randomMarble, None, None, [], [], list(moves.values()))
+    #                 else:
+    #                     return False
+    #             randomChain = random.choice(possibleChains)
+    #         elif len(chosenBoxes) == 1:
+    #             possibleChain =  possibleChainsFromPoint(randomLength, chosenBoxes[0], None, None, [], [], list(moves.values()))
+    #             chosenBoxes.remove(randomMarble)
+    #         else:
+    #             return False
+    #     a = action(randomChain, randomMove, color, True)
+    
+    # return color, randomChain, a
+        
 def opposingMarblesOut(yourColor):
     counter = 0
     opposingColor = ''
@@ -496,26 +585,38 @@ def opposingMarblesOut(yourColor):
 if __name__ == '__main__':
     displayBoard(board)
 
-    scoreWhite = opposingMarblesOut('B')
-    scoreBlack = opposingMarblesOut('W')
-    color = random.choice(('W', 'B'))
+    print(randomPlay("W"))
+
+    color = random.choice(["W", "B"])
+    result = randomPlay(color)
+
+    while result[0] is True:
+        color = random.choice(["W", "B"])
+        result = randomPlay(color)
+        print(result)
+        time.sleep(.01)
+
+
+    # scoreWhite = opposingMarblesOut('B')
+    # scoreBlack = opposingMarblesOut('W')
+    # color = random.choice(('W', 'B'))
     
-    while scoreBlack < 6 and scoreWhite < 6:
-        scoreWhite = opposingMarblesOut('B')
-        scoreBlack = opposingMarblesOut('W')
+    # while scoreBlack < 6 and scoreWhite < 6:
+    #     scoreWhite = opposingMarblesOut('B')
+    #     scoreBlack = opposingMarblesOut('W')
 
-        if color == 'B':
-            color = 'W'
-        elif color == 'W':
-            color = 'B'
+    #     if color == 'B':
+    #         color = 'W'
+    #     elif color == 'W':
+    #         color = 'B'
 
-        randomPlay(color)
+    #     print(randomPlay(color))
 
-    displayBoard(board)
-    print(scoreBlack, scoreWhite)
-    if scoreBlack == 6:
-        winner = "Black"
-    else:
-        winner = "White"
+    # displayBoard(board)
+    # print(scoreBlack, scoreWhite)
+    # if scoreBlack == 6:
+    #     winner = "Black"
+    # else:
+    #     winner = "White"
 
-    print(f"the winner is : {winner}")
+    # print(f"the winner is : {winner}")
