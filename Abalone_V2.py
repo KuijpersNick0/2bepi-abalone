@@ -51,10 +51,10 @@ class MCTS_V2:
 
     def do_rollout(self, node):
         #on recherche une node en plus
-        path = self._select(node)
+        path = self._select(node) 
         leaf = path[-1]
-        self._expand(leaf)
-        reward = self._simulate(leaf)
+        self._expand(leaf)        
+        reward = self._simulate(leaf)        
         self._backpropagate(path, reward)
 
     def _select(self, node):
@@ -79,15 +79,16 @@ class MCTS_V2:
         if node in self.children:
             return #deja dedans
         self.children[node] = node.legal_plays(node.turn)
+        
 
     def _simulate(self, node):
         #simule le gain ou pas
         
         invert_winner = True
         while True:
-            if node.is_terminal():
-                winner = node.winner()
-                return 1 - winner if invert_winner else winner
+            if node.is_terminal():                
+                winner = node.reward()
+                return 1 - reward if invert_winner else reward
             node = node.randomPlay(node.turn)
             invert_winner = not invert_winner
 
@@ -140,7 +141,7 @@ class Node(ABC):
     #    "Nodes must be comparable"
     #    return True
 
-_TTTB = namedtuple("AbaloneBoard", "tup turn winner terminal")
+_TTTB = namedtuple("Board", "tup turn winner terminal")
 
 class Board(_TTTB, Node):    
 
@@ -213,13 +214,13 @@ class Board(_TTTB, Node):
         ! FIX BUGS WITH COLOR    
             Checks if all marbles have the right color.
         """
-        board = self.tup_to_list(self.tup) 
+        self.board = self.tup_to_list(self.tup) 
         for marble in marblesArray:
-            if board[marble[0]][marble[1]] != 'W' and board[marble[0]][marble[1]] != 'B':
+            if self.board[marble[0]][marble[1]] != 'W' and self.board[marble[0]][marble[1]] != 'B':
                 # print("no marble here", marblesArray, marble, board[marble[0]][marble[1]])
                 return "caseWithoutMarbleError"
             else:
-                if board[marble[0]][marble[1]] != color:
+                if self.board[marble[0]][marble[1]] != color:
                     # print("wrong color marble")
                     return "wrongColorError"
 
@@ -648,7 +649,6 @@ class Board(_TTTB, Node):
         myMoves = list(moves.keys())
         lengthChains = 2
         
-
         if self.terminal:  # If the game is finished then no moves can be made
             return set()
     
@@ -672,7 +672,7 @@ class Board(_TTTB, Node):
         self.action(moveA[0], moveA[1], self.turn, True)
         newTup = self.list_to_tup(self.board)     
         winner = self.winner()
-        
+
         if self.turn == "W":
             turn2 = "B"
         elif self.turn == "B":
@@ -695,7 +695,6 @@ class Board(_TTTB, Node):
         return Board(newTup, turn2, winner, is_terminal)
 
     def is_terminal(self):              
-        print("hello")
         return self.terminal
 
     def winner(self):
@@ -714,7 +713,7 @@ class Board(_TTTB, Node):
         return None
 
     def reward(self):
-        if not board.terminal:
+        if not self.terminal:
             raise RuntimeError("reward called on nonterminal board")
         if self.winner is True:
             # It's your turn and you've already won. Should be impossible.
@@ -725,34 +724,25 @@ class Board(_TTTB, Node):
             return 0.5  # Board is a tie
         # The winner is neither True, False, nor None
         raise RuntimeError("board has unknown winner type ")
+        
 
-def play_game():
+def play_game(a,b,c,d):
     tree = MCTS_V2()
-    game = new_abalone_board()
-    games = 0
+    game = new_abalone_board(a,b,c,d)
     print(game.displayBoard())
-    while True:
-        print(game.displayBoard())
-        for _ in range(50):
-            tree.do_rollout(game)
-            game.displayBoard()
-        game = tree.choose(game)         
-        games+=1
-        print(games)
-        if game.terminal:
-            break
 
-def new_abalone_board():
-    return Board(tup = (
-        ("W", "W", "W", "W", "W", "X", "X", "X", "X"),
-        ("W", "W", "W", "W", "W", "W", "X", "X", "X"),
-        ("E", "E", "W", "W", "W", "E", "E", "X", "X"),
-        ("E", "E", "E", "E", "E", "E", "E", "E", "X"),
-        ("E", "E", "E", "E", "E", "E", "E", "E", "E"),
-        ("X", "E", "E", "E", "E", "E", "E", "E", "E"),
-        ("X", "X", "E", "E", "B", "B", "B", "E", "E"),
-        ("X", "X", "X", "B", "B", "B", "B", "B", "B"),
-        ("X", "X", "X", "X", "B", "B", "B", "B", "B")), turn="W", winner=None, terminal=False)
+    if game.terminal:
+        return 
+    for _ in range(50):
+        tree.do_rollout(game)            
+    game = tree.choose(game)  
+    
+    print(game.displayBoard())
+    if game.terminal:
+        return
+
+def new_abalone_board(a,b,c,d):
+    return Board(tup =a, turn=b, winner=c, terminal=d)
 
 
 if __name__ == '__main__':
@@ -793,5 +783,15 @@ if __name__ == '__main__':
 
     #from Abalone_V2 import MCTS_V2, Node, Board
     
-    play_game()
+    res = play_game((
+        ("W", "W", "W", "W", "W", "X", "X", "X", "X"),
+        ("W", "W", "W", "W", "W", "W", "X", "X", "X"),
+        ("E", "E", "W", "W", "W", "E", "E", "X", "X"),
+        ("E", "E", "E", "E", "E", "E", "E", "E", "X"),
+        ("E", "E", "E", "E", "E", "E", "E", "E", "E"),
+        ("X", "E", "E", "E", "E", "E", "E", "E", "E"),
+        ("X", "X", "E", "E", "B", "B", "B", "E", "E"),
+        ("X", "X", "X", "B", "B", "B", "B", "B", "B"),
+        ("X", "X", "X", "X", "B", "B", "B", "B", "B")), "W", None, False  )
+    print(res)
  
