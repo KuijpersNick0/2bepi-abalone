@@ -43,7 +43,6 @@ def minimax(state, depth, maximizer, alpha, beta):
         Pour chaque move possible, le sélectionner et rappeler la fonction minimax mais avec l'autre joueur et en enlevant 1 de profondeur
         Idem pour la 3ème couche
 
-
     """
 
     if depth == 3:
@@ -87,24 +86,25 @@ def minimax(state, depth, maximizer, alpha, beta):
 def heuristic(state, maximizer):    
     result = 0
     result += state.population(maximizer)
-
+    
     if state.winner(maximizer) == True:
         result += 200
     elif state.winner(maximizer) == False:
         result -= 200
 
-    result += 1 / state.closeCenter(maximizer)
+    result +=  state.closeCenter(maximizer)
+    #print(state.closeCenter(maximizer))
+
+    result += state.winning(maximizer)
+
     return result
+
 
 
 class Board:
     def __init__(self, board):
         self.board = board
 
-    # def new_abalone(self):
-    #     copy = self.board
-    #     return Board(copy)
-    
     def myColor(self, maximizer):
         yourColor= ""
         if maximizer == True:
@@ -113,6 +113,7 @@ class Board:
             yourColor = "B"
 
         return yourColor
+    
 
     def closeCenter(self, maximizer):
         myColor = self.myColor(maximizer)       
@@ -123,30 +124,30 @@ class Board:
                 if value == myColor:
                     marbles.add((i,j))
         
-        # for i in marbles:
-        #     result += self.distance(i)
+        for i in marbles:
+            result += self.distance(i)
 
-        return self.distance(marbles)
+        return result
 
-    def distance(self, marbles):
+    def distance(self, marble):
         center = [4,4]
-        sum = 0
+        #sum = 0
 
-        for marble in marbles:
-            rowDistance = abs(marble[0] - center[0])
-            colDistance = abs(marble[1] - center[1])
+        #for marble in marbles:
+        #    rowDistance = abs(marble[0] - center[0])
+        #    colDistance = abs(marble[1] - center[1])
 
-            result = rowDistance + colDistance
-            sum += result
+        #    result = rowDistance + colDistance
+        #    sum += result
 
-        return sum
+        #return sum
  
 
         #dist= sqrt[(x2-x1)^2 +(y2-y1)^2]
-        # dist2 = math.sqrt((marble[0] - 4)**2 + (marble[1] - 4)**2)         
+        dist2 = math.sqrt((marble[0] - 4)**2 + (marble[1] - 4)**2)         
         #dist = ((abs(marbles[0] - 4) + abs(marbles[1] - 4))/2)
 
-        # return dist2
+        return dist2
 
     def population(self, maximizer):
         color = self.myColor(maximizer)
@@ -164,6 +165,25 @@ class Board:
                             pass
 
         return counter
+
+    def winning(self, maximizer):
+        yourColor = self.myColor(maximizer)
+        compte = self.opposingMarblesOut(maximizer)
+        resultat = 0
+        for i in range(compte):
+            resultat += 10
+
+        return resultat
+
+    def centerEmpty(self, maximizer):
+        return False
+
+    def tricheBoard(self, maximizer):
+        color = self.myColor(maximizer)
+        fakeBoard = self.board
+        fakeBoard[4,4] = color
+        return fakeBoard
+
 
     def opposingMarblesOut(self, maximizer):
         yourColor = self.myColor(maximizer)
@@ -708,6 +728,17 @@ if __name__ == '__main__':
     # a,b= (minimax(state,3,True))   
     # print(a,b)
 
+    #b = Board([
+    #["W", "W", "W", "W", "W", "X", "X", "X", "X"],
+    #["W", "W", "W", "W", "W", "W", "X", "X", "X"],
+    #["E", "E", "W", "W", "W", "E", "E", "X", "X"],
+    #["E", "E", "E", "E", "E", "E", "E", "E", "X"],
+    #["E", "E", "E", "E", "E", "E", "E", "E", "E"],
+    #["X", "E", "E", "E", "E", "E", "E", "E", "E"],
+    #["X", "X", "E", "E", "B", "B", "B", "E", "E"],
+    #["X", "X", "X", "B", "B", "B", "B", "B", "B"],
+    #["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
+
     b = Board([
     ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
     ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
@@ -732,7 +763,7 @@ if __name__ == '__main__':
 
     # print(b.population(False))
 
-    result = minimax(b, 3, True, -math.inf, math.inf)
+    result = minimax(b, 3, False, -math.inf, math.inf)
     print(result)
     b.displayBoard()
 
