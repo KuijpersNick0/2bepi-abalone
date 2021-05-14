@@ -1,5 +1,7 @@
 import math 
 import time
+import copy
+import random
 
 moves = {
     "NW":[-1, -1],
@@ -15,7 +17,9 @@ moves = {
 """
 node_count=0
 
-def minimax(state, depth, maximizer):
+def minimax(state, depth, maximizer, alpha, beta):
+    move = -1
+    
     if state.is_terminal():        
         return (-math.inf if maximizer else math.inf), -1
     elif depth == 0:         
@@ -23,160 +27,215 @@ def minimax(state, depth, maximizer):
 
     if maximizer:       
         score = -math.inf
+        # x est l'ancien score, on souhaite savoir si l'ancien score est plus grand que le meilleur score pour maximizer = True
         def shouldReplace(x): return x > score
     else:
         score = math.inf
+        # x est l'ancien score, on souhaite savoir si l'ancien score est mieux classé (donc plus petit) que le meilleur score pour maximizer = False
         def shouldReplace(x): return x < score
 
-    move = -1
+    successors = state.legal_plays(maximizer) #maximizer c'est le turn
+    boards = []
 
-    successors = state.legal_plays(maximizer) #maximizer c'est le turn    
-    
-    for successor in successors:        
-        global node_count
+    # state.displayBoard()
+    """
+        On va parcourir l'ensemble des moves possibles
+        Pour chaque move possible, le sélectionner et rappeler la fonction minimax mais avec l'autre joueur et en enlevant 1 de profondeur
+        Idem pour la 3ème couche
+
+
+    """
+
+    if depth == 3:
+        print("<<<< FIRST DEPTH >>>>")
+    elif depth == 2:
+        print("____ second depth ___")
+    elif depth == 1:
+        print("...")
+
+    R_successors = reversed(successors)
+
+    # for s in R_successors:
+    #     print(s)
+
+    for moveName in R_successors:        
+        global node_count # permet de modifier une variable publique
         node_count += 1
-        #print(node_count)
-        print(successor)        
-        moveName = successor
-        n_state = state.new_abalone()
-        n_state.action(moveName[0], moveName[1], maximizer, True)       
-        temp = minimax(n_state, depth - 1, not maximizer)[0]
-        #print(temp)
-        if shouldReplace(temp):            
-            score = temp
+
+        copyBoard = copy.deepcopy(state.board)
+        newState = Board(copyBoard)
+
+        newState.action(moveName[0], moveName[1], maximizer, True)  
+        tempoScore = minimax(newState, depth - 1, not maximizer, alpha, beta)[0]
+
+        if shouldReplace(tempoScore):          
+            score = tempoScore
             move = moveName
-        #if score > 5:
-        #    break        
-        #print(score,move)
-        time.sleep(.5)
-    print(score,move)
+
+        if maximizer:
+            alpha = max(alpha, tempoScore)
+        else:
+            beta = min(beta, tempoScore)
+        
+        if alpha >= beta:
+            break
+
+        # print(score, move)
+
     return score, move
 
 def heuristic(state, maximizer):    
-    res=0
-    if state.winner(maximizer)==True:
-        res+=5
-    elif state.winner(maximizer)==False:
-        res-=5
+    result = 0
+    result += state.population(maximizer)
 
-    res += state.closeCenter(maximizer)
-    #print(res)
-    return res 
+    if state.winner(maximizer) == True:
+        result += 200
+    elif state.winner(maximizer) == False:
+        result -= 200
+
+    result += 1 / state.closeCenter(maximizer)
+    return result
 
 
 class Board:
     def __init__(self, board):
         self.board = board
 
-    def new_abalone(self):
-        copy = self.board
-        return Board(copy)
+    # def new_abalone(self):
+    #     copy = self.board
+    #     return Board(copy)
     
     def myColor(self, maximizer):
-        yourColor= " "
-        if maximizer==True:
-            yourColor= "W"
+        yourColor= ""
+        if maximizer == True:
+            yourColor = "W"
         else:
-            yourColor="B"
+            yourColor = "B"
+
         return yourColor
 
     def closeCenter(self, maximizer):
         myColor = self.myColor(maximizer)       
         marbles = set()
-        res=0
+        result = 0
         for i,row in enumerate(self.board):         
             for j,value in enumerate(row):
                 if value == myColor:
                     marbles.add((i,j))
         
-        for i in marbles:           
-            res += self.distance(i)
-        return res        
+        # for i in marbles:
+        #     result += self.distance(i)
+
+        return self.distance(marbles)
 
     def distance(self, marbles):
-         center = [4,4]
-         #dist= sqrt[(x2-x1)^2 +(y2-y1)^2]
-         dist2 = math.sqrt((marbles[0] - 4)**2 + (marbles[1] - 4)**2)         
-         #dist = ((abs(marbles[0] - 4) + abs(marbles[1] - 4))/2)
+        center = [4,4]
+        sum = 0
 
-         return dist2
+        for marble in marbles:
+            rowDistance = abs(marble[0] - center[0])
+            colDistance = abs(marble[1] - center[1])
 
-    def population(self):
-        return None
+            result = rowDistance + colDistance
+            sum += result
+
+        return sum
+ 
+
+        #dist= sqrt[(x2-x1)^2 +(y2-y1)^2]
+        # dist2 = math.sqrt((marble[0] - 4)**2 + (marble[1] - 4)**2)         
+        #dist = ((abs(marbles[0] - 4) + abs(marbles[1] - 4))/2)
+
+        # return dist2
+
+    def population(self, maximizer):
+        color = self.myColor(maximizer)
+        counter = 0
+
+        for i, row in enumerate(self.board):
+            for j, value in enumerate(row):
+                if value == color:
+                    for move in list(moves.values()):
+                        try:
+                            if self.board[i + move[0]][j + move[1]] == color:
+                                counter += 1
+                        except:
+                            # lorqu'on se trouve aux abords du plateau, on peut recevoir une erreur pour certains mouvements faits
+                            pass
+
+        return counter
 
     def opposingMarblesOut(self, maximizer):
-            if maximizer==True:
-                yourColor="W"
-            else:
-                yourColor="B"
-            counter = 0
-            opposingColor = ''
+        yourColor = self.myColor(maximizer)
+        counter = 0
+        opposingColor = ''
 
-            # ! COMMENT FAIRE CETTE CONDITION TERNAIRE ?
-            # opposingColor = 'W' if(yourColor == 'B') else opposingColor = 'B'
+        # ! COMMENT FAIRE CETTE CONDITION TERNAIRE ?
+        # opposingColor = 'W' if(yourColor == 'B') else opposingColor = 'B'
 
-            if yourColor == 'B':
-                opposingColor = 'W'
-            else:
-                opposingColor = 'B'
+        if yourColor == 'B':
+            opposingColor = 'W'
+        else:
+            opposingColor = 'B'
 
-            for row in self.board:                
-                for box in row:
-                    if box == opposingColor:
-                        counter += 1
-    
-            return 14 - counter
+        for row in self.board:                
+            for box in row:
+                if box == opposingColor:
+                    counter += 1
+
+        return 14 - counter
 
     def legal_plays(self, maximizer):        
-            player = self.myColor(maximizer)
-            allMoves = []      
-            chosenBoxes = []
-            possibleChains = []
-            myMoves = list(moves.keys())
-            lengthChains = [1,2,3]               
-    
-            for i,row in enumerate(self.board):
-                for j,value in enumerate(row):
-                    if value == player:
-                        chosenBoxes.append([i,j])                          
-                    
-            for i in lengthChains:
-                for j in chosenBoxes:
-                    res = self.possibleChainsFromPoint(i, j, None, None, [], [], possibleDirections=list(moves.values()))                     
-                    if res is not "notMoveFoundError":
-                        for elem in res:
-                            possibleChains.append(elem)            
-                            
+        color = self.myColor(maximizer)
+        allMoves = []      
+        chosenBoxes = []
+        possibleChains = []
+        myMoves = list(moves.keys())
+        lengthChains = [1, 2, 3]               
 
-            for i in possibleChains:               
-                for j in myMoves:                           
-                    if self.action(i, j, maximizer, False) is not False:                    
-                        allMoves.append((i,j))
-                    
-            return allMoves
+        for i,row in enumerate(self.board):
+            for j,value in enumerate(row):
+                if value == color:
+                    chosenBoxes.append([i,j])                          
+                
+        for i in lengthChains:
+            for j in chosenBoxes:
+                chains = self.possibleChainsFromPoint(i, j, None, None, [], [], possibleDirections=list(moves.values()))                     
+                if chains != "notMoveFoundError":
+                    for elem in chains:
+                        possibleChains.append(elem)                                  
+
+        for chain in possibleChains:               
+            for move in myMoves:                           
+                if self.action(chain, move, maximizer) is not False:                    
+                    allMoves.append((chain,move))
+        
+        # for move in allMoves:
+        #     print(move)
+      
+        return allMoves
 
     def is_terminal(self):
-        scoreWhite = self.opposingMarblesOut('B')
-        scoreBlack = self.opposingMarblesOut('W')
-        if scoreBlack==6:
+        scoreWhite = self.opposingMarblesOut(False)
+        scoreBlack = self.opposingMarblesOut(True)
+
+        if scoreBlack == 6 or scoreWhite == 6:
             return True
-        elif scoreWhite==6:
-            return True
-        else:
-            return False
+        
+        return False
 
     def winner(self, maximizer):
-            player = self.myColor(maximizer)
+            color = self.myColor(maximizer)
             scoreWhite = self.opposingMarblesOut('B')
             scoreBlack = self.opposingMarblesOut('W')
         
-            if scoreBlack == 6 and player == "W":
+            if scoreBlack == 6 and color == "W":
                 return True
-            elif scoreBlack == 6 and player == "B":
+            elif scoreBlack == 6 and color == "B":
                 return False
-            elif scoreWhite == 6 and player == "B":
+            elif scoreWhite == 6 and color == "B":
                 return True
-            elif scoreWhite == 6 and player == "W":
+            elif scoreWhite == 6 and color == "W":
                 return False
 
             return None
@@ -185,28 +244,28 @@ class Board:
         """
             Shows the Abalone board.
         """
-        result = "\n\t [ CURRENT BOARD ]\n\n"
+        chainsult = "\n\t [ CURRENT BOARD ]\n\n"
         for index,row in enumerate(self.board):
             if index == 0 or index == 8:
-                result += "        "
+                chainsult += "        "
             elif index == 1 or index == 7:
-                result += "      "
+                chainsult += "      "
             elif index == 2 or index == 6:
-                result += "    "
+                chainsult += "    "
             elif index == 3 or index == 5:
-                result += "  "
+                chainsult += "  "
             elif index == 5:
-                result += ""
+                chainsult += ""
             for case in row:
                 if case == "X":
                     pass
                 elif case == "E":
-                    result += " .  "
+                    chainsult += " .  "
                 else:
-                    result += f" {case}  "
-            result += "\n"
+                    chainsult += f" {case}  "
+            chainsult += "\n"
     
-        print(result)
+        print(chainsult)
 
     def existingDirection(self, moveName):
         """
@@ -234,7 +293,7 @@ class Board:
         """
         for marble in marblesArray:
             if self.board[marble[0]][marble[1]] != 'W' and self.board[marble[0]][marble[1]] != 'B':
-                # print("no marble here", marblesArray, marble, board[marble[0]][marble[1]])
+                # print("no marble here", marblesArray, marble, self.board[marble[0]][marble[1]])
                 return False
             else:
                 if self.board[marble[0]][marble[1]] != color:
@@ -389,7 +448,7 @@ class Board:
                 nextMarbleValue = self.board[marble[0] + moves[moveName][0]][marble[1] + moves[moveName][1]]
                 currentMarbleValue = self.board[marble[0]][marble[1]]
                 if nextMarbleValue == currentMarbleValue:
-                    return False, "allyPresenceError", marblesArray, moveName
+                    return False, "allyPchainsenceError", marblesArray, moveName
                 elif nextMarbleValue == 'X':
                     return False, "outLimitError", marblesArray, moveName
                 elif nextMarbleValue == 'E':
@@ -429,7 +488,7 @@ class Board:
             if nextValue == 'X':
                 return False, "outLimitError"
             elif nextValue == currentValue:
-                return False, "allyPresenceError"
+                return False, "allyPchainsenceError"
             elif nextValue == 'E':
                 pass
             else:
@@ -634,7 +693,22 @@ class Board:
         
 
 if __name__ == '__main__':
-    state = Board([
+    # state = Board([
+    # ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
+    # ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
+    # ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
+    # ["E", "E", "E", "E", "E", "E", "E", "E", "X"],
+    # ["E", "E", "E", "E", "E", "E", "E", "E", "E"],
+    # ["X", "E", "E", "E", "E", "E", "E", "E", "E"],
+    # ["X", "X", "E", "E", "B", "B", "B", "E", "E"],
+    # ["X", "X", "X", "B", "B", "B", "B", "B", "B"],
+    # ["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
+    
+    # state.displayBoard()
+    # a,b= (minimax(state,3,True))   
+    # print(a,b)
+
+    b = Board([
     ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
     ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
     ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
@@ -644,10 +718,27 @@ if __name__ == '__main__':
     ["X", "X", "E", "E", "B", "B", "B", "E", "E"],
     ["X", "X", "X", "B", "B", "B", "B", "B", "B"],
     ["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
+
+    # b = Board([
+    # ["W", "W", "E", "E", "W", "X", "X", "X", "X"],
+    # ["W", "W", "W", "E", "E", "E", "X", "X", "X"],
+    # ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
+    # ["E", "E", "E", "E", "W", "E", "E", "E", "X"],
+    # ["E", "B", "W", "E", "E", "W", "E", "E", "E"],
+    # ["X", "E", "B", "W", "B", "E", "E", "E", "E"],
+    # ["X", "X", "E", "W", "E", "B", "B", "E", "E"],
+    # ["X", "X", "X", "B", "E", "B", "B", "B", "B"],
+    # ["X", "X", "X", "X", "E", "B", "B", "B", "B"]])
+
+    # print(b.population(False))
+
+    result = minimax(b, 3, True, -math.inf, math.inf)
+    print(result)
+    b.displayBoard()
+
+    # a = [1, 2]
+    # b = copy.copy(a)
+    # c = copy.deepcopy(a)
     
-    state.displayBoard()
-    a,b= (minimax(state,3,True))   
-    print(a,b)
 
-
-
+    # print(id(a), id(b), id(c))
