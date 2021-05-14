@@ -1,172 +1,190 @@
-import random
+import math 
 import time
-from collections import defaultdict
-from collections import namedtuple
-import math
-from abc import ABC, abstractmethod 
-
-#board = [
-#        ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
-#        ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
-#        ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
-#        ["E", "E", "E", "E", "E", "E", "E", "E", "X"],
-#        ["E", "E", "E", "E", "E", "E", "E", "E", "E"],
-#        ["X", "E", "E", "E", "E", "E", "E", "E", "E"],
-#        ["X", "X", "E", "E", "B", "B", "B", "E", "E"],
-#        ["X", "X", "X", "B", "B", "B", "B", "B", "B"],
-#        ["X", "X", "X", "X", "B", "B", "B", "B", "B"]]
 
 moves = {
-        "NW":[-1, -1],
-        "NE":[-1,  0],
-        "E" :[ 0,  1],
-        "SW":[ 1,  0],
-        "SE":[ 1,  1],
-        "W" :[ 0, -1]}     
+    "NW":[-1, -1],
+    "NE":[-1,  0],
+    "E" :[ 0,  1],
+    "SW":[ 1,  0],
+    "SE":[ 1,  1],
+    "W" :[ 0, -1]
+}
 
-#current_player = "W"
+"""
+    ...
+"""
+node_count=0
+
+def minimax(state, depth, maximizer):
+    if state.is_terminal():        
+        return (-math.inf if maximizer else math.inf), -1
+    elif depth == 0:         
+        return heuristic(state, maximizer), -1
+
+    if maximizer:       
+        score = -math.inf
+        def shouldReplace(x): return x > score
+    else:
+        score = math.inf
+        def shouldReplace(x): return x < score
+
+    move = -1
+
+    successors = state.legal_plays(maximizer) #maximizer c'est le turn    
+    
+    for successor in successors:        
+        global node_count
+        node_count += 1
+        #print(node_count)
+        print(successor)        
+        moveName = successor
+        n_state = state.new_abalone()
+        n_state.action(moveName[0], moveName[1], maximizer, True)       
+        temp = minimax(n_state, depth - 1, not maximizer)[0]
+        #print(temp)
+        if shouldReplace(temp):            
+            score = temp
+            move = moveName
+        #if score > 5:
+        #    break        
+        #print(score,move)
+        time.sleep(.5)
+    print(score,move)
+    return score, move
+
+def heuristic(state, maximizer):    
+    res=0
+    if state.winner(maximizer)==True:
+        res+=5
+    elif state.winner(maximizer)==False:
+        res-=5
+
+    res += state.closeCenter(maximizer)
+    #print(res)
+    return res 
 
 
+class Board:
+    def __init__(self, board):
+        self.board = board
 
-class MCTS_V2:
-    def __init__(self, coef_exploration=1):
-        self.Q = defaultdict(int) #les "wins" de chaque node
-        self.N = defaultdict(int) #les visites de chaque node
-        self.children =dict() #les enfants de chaque node
-        self.coef_exploration = coef_exploration
+    def new_abalone(self):
+        copy = self.board
+        return Board(copy)
+    
+    def myColor(self, maximizer):
+        yourColor= " "
+        if maximizer==True:
+            yourColor= "W"
+        else:
+            yourColor="B"
+        return yourColor
 
-    def choose(self, node):
-        #choisit le meilleur node, continuation de la game                
-        if node.is_terminal():
-            raise RuntimeError(f"choose called on terminal {node}")
-
-        if node not in self.children:
-            return node.randomPlay(node.turn)
-
-        def score(n):
-            if self.N[n] == 0:
-                return float("-inf") 
-            return self.Q[n] + self.N[n]
-        return max(self.children[node], key = score)
-
-    def do_rollout(self, node):
-        #on recherche une node en plus
-        path = self._select(node) 
-        leaf = path[-1]
-        self._expand(leaf)        
-        reward = self._simulate(leaf)        
-        self._backpropagate(path, reward)
-
-    def _select(self, node):
-        #Cherche des nodes de nodes inexploré
+    def closeCenter(self, maximizer):
+        myColor = self.myColor(maximizer)       
+        marbles = set()
+        res=0
+        for i,row in enumerate(self.board):         
+            for j,value in enumerate(row):
+                if value == myColor:
+                    marbles.add((i,j))
         
-        path = []
-        while True:
-            path.append(node)
-            if node not in self.children or not self.children[node]:
-                #Pas exploré ou terminal
-                return path
-            unexplored = self.children[node] - self.children.keys()
+        for i in marbles:           
+            res += self.distance(i)
+        return res        
 
-            if unexplored:
-                n = unexplored.pop()
-                path.append(n)
-                return path
-            node = self._uct_select(node)  # On cherche 1 plus loin
+    def distance(self, marbles):
+         center = [4,4]
+         #dist= sqrt[(x2-x1)^2 +(y2-y1)^2]
+         dist2 = math.sqrt((marbles[0] - 4)**2 + (marbles[1] - 4)**2)         
+         #dist = ((abs(marbles[0] - 4) + abs(marbles[1] - 4))/2)
 
-    def _expand(self, node):
-        #Update le children dict avec les enfants du node
-        if node in self.children:
-            return #deja dedans
-        self.children[node] = node.legal_plays(node.turn)
-        
+         return dist2
 
-    def _simulate(self, node):
-        #simule le gain ou pas
-        
-        invert_winner = True
-        while True:
-            if node.is_terminal():                
-                winner = node.reward()
-                return 1 - reward if invert_winner else reward
-            node = node.randomPlay(node.turn)
-            invert_winner = not invert_winner
-
-    def _backpropagate(self, path, winner):
-        #on remonte winner
-        for node in reversed(path):
-            self.N[node] += 1
-            self.Q[node] += winner
-            winner = 1 - winner # 1 pour moi, 0 pour mon enemie
-
-    def _uct_select(self, node):
-        #UCB1 methode équilibre exploration/exploitation
-        
-        #Tout les enfants node devraient etre explorées
-        assert all(n in self.children for n in self.children[node])
-
-        log_N_vertex = math.log(self.N[node])
-
-        def uct(n):
-            return self.Q[n] / self.N[n] + self.coef_exploration * math.sqrt(log_N_vertex /self.N[n])
-
-        return max(self.children[node], key=uct)
-
-class Node(ABC):
-    #la representation d'un état (un node)
-
-    @abstractmethod
-    def legal_plays(self, current_player):
-        return set()
-
-    @abstractmethod
-    def randomPlay(self, current_player):
+    def population(self):
         return None
 
-    @abstractmethod
+    def opposingMarblesOut(self, maximizer):
+            if maximizer==True:
+                yourColor="W"
+            else:
+                yourColor="B"
+            counter = 0
+            opposingColor = ''
+
+            # ! COMMENT FAIRE CETTE CONDITION TERNAIRE ?
+            # opposingColor = 'W' if(yourColor == 'B') else opposingColor = 'B'
+
+            if yourColor == 'B':
+                opposingColor = 'W'
+            else:
+                opposingColor = 'B'
+
+            for row in self.board:                
+                for box in row:
+                    if box == opposingColor:
+                        counter += 1
+    
+            return 14 - counter
+
+    def legal_plays(self, maximizer):        
+            player = self.myColor(maximizer)
+            allMoves = []      
+            chosenBoxes = []
+            possibleChains = []
+            myMoves = list(moves.keys())
+            lengthChains = [1,2,3]               
+    
+            for i,row in enumerate(self.board):
+                for j,value in enumerate(row):
+                    if value == player:
+                        chosenBoxes.append([i,j])                          
+                    
+            for i in lengthChains:
+                for j in chosenBoxes:
+                    res = self.possibleChainsFromPoint(i, j, None, None, [], [], possibleDirections=list(moves.values()))                     
+                    if res is not "notMoveFoundError":
+                        for elem in res:
+                            possibleChains.append(elem)            
+                            
+
+            for i in possibleChains:               
+                for j in myMoves:                           
+                    if self.action(i, j, maximizer, False) is not False:                    
+                        allMoves.append((i,j))
+                    
+            return allMoves
+
     def is_terminal(self):
-        return True
+        scoreWhite = self.opposingMarblesOut('B')
+        scoreBlack = self.opposingMarblesOut('W')
+        if scoreBlack==6:
+            return True
+        elif scoreWhite==6:
+            return True
+        else:
+            return False
 
-    @abstractmethod
-    def winner(self):
-        return 0
+    def winner(self, maximizer):
+            player = self.myColor(maximizer)
+            scoreWhite = self.opposingMarblesOut('B')
+            scoreBlack = self.opposingMarblesOut('W')
+        
+            if scoreBlack == 6 and player == "W":
+                return True
+            elif scoreBlack == 6 and player == "B":
+                return False
+            elif scoreWhite == 6 and player == "B":
+                return True
+            elif scoreWhite == 6 and player == "W":
+                return False
 
-    #@abstractmethod
-    #def __hash__(self):
-    #    "Nodes must be hashable"
-    #    return 123456789
-
-    #@abstractmethod
-    #def __eq__(node1, node2):
-    #    "Nodes must be comparable"
-    #    return True
-
-_TTTB = namedtuple("Board", "tup turn winner terminal")
-
-class Board(_TTTB, Node):    
-
-    def tup_to_list(self, tup):
-        board = [list(i) for i in tup]
-        return board
-    def list_to_tup(self, list):
-        tup = (tuple(i) for i in list)
-        return tup
-
-    #def next_state(self, marblesArray, moveName, player):
-    #    self.action(marblesArray, moveName, player, True)
-    #    if player == "W":
-    #        current_player = "B"
-    #    else:
-    #        current_player = "W"
-    #    return (player, board, (marblesArray,moveName))
+            return None
 
     def displayBoard(self):
         """
             Shows the Abalone board.
         """
-        
-        self.board = self.tup_to_list(self.tup)
-        
         result = "\n\t [ CURRENT BOARD ]\n\n"
         for index,row in enumerate(self.board):
             if index == 0 or index == 8:
@@ -214,15 +232,14 @@ class Board(_TTTB, Node):
         ! FIX BUGS WITH COLOR    
             Checks if all marbles have the right color.
         """
-        self.board = self.tup_to_list(self.tup) 
         for marble in marblesArray:
             if self.board[marble[0]][marble[1]] != 'W' and self.board[marble[0]][marble[1]] != 'B':
                 # print("no marble here", marblesArray, marble, board[marble[0]][marble[1]])
-                return "caseWithoutMarbleError"
+                return False
             else:
                 if self.board[marble[0]][marble[1]] != color:
                     # print("wrong color marble")
-                    return "wrongColorError"
+                    return False
 
         return True
 
@@ -260,7 +277,6 @@ class Board(_TTTB, Node):
                     - Next color == 'E' (empty), you can move your chain\n
                     - Next color == opposing color, looks at the opponent chain and checks if the box behind the string is empty or out of board
         """
-        self.board =self.tup_to_list(self.tup)
         vectorMove = moves[moveName]
         vectorChain = self.chain(marblesArray)
         lastMarble = marblesArray[0]
@@ -364,8 +380,6 @@ class Board(_TTTB, Node):
             \n
             For each marbles, if the next box is 'E' or the opposing color (with an empty box behind), you can move your chain !
         """
-
-        self.board = self.tup_to_list(self.tup)
         updatedMarbles = []
         if len(marblesArray) == 1:
             return "singleMarbleInfo", marblesArray, moveName
@@ -382,7 +396,7 @@ class Board(_TTTB, Node):
                     pass
                 else:
                     try:
-                        if board[marble[0] + 2 * moves[moveName][0]][marble[1] + 2 * moves[moveName][1]] == nextMarbleValue:
+                        if self.board[marble[0] + 2 * moves[moveName][0]][marble[1] + 2 * moves[moveName][1]] == nextMarbleValue:
                             return False, "opponentMoveError", marblesArray, moveName
                     except:
                         return False, "outOfRange"
@@ -405,7 +419,6 @@ class Board(_TTTB, Node):
             \n
             So if the next box is 'E', you can move your marble and update your board !
         """
-        self.board = self.tup_to_list(self.tup)
         if len(marblesArray) == 1:
             currentValue = self.board[marblesArray[0][0]][marblesArray[0][1]]
             try:
@@ -431,8 +444,6 @@ class Board(_TTTB, Node):
         """
             Adds changes into the last board.
         """
-        self.board = self.tup_to_list(self.tup)
-
         color = self.board[oldPositions[0][0]][oldPositions[0][1]]
 
         for marble in oldPositions:
@@ -441,7 +452,7 @@ class Board(_TTTB, Node):
         for marble in newPositions:
             self.board[marble[0]][marble[1]] = f"{color}"
 
-    def action(self, marblesArray, moveName, color, update=False):
+    def action(self, marblesArray, moveName, maximizer, update=False):
         """
             - Checks the marble's color\n
             - Checks the direction existence\n
@@ -451,7 +462,8 @@ class Board(_TTTB, Node):
             \t- If arrowMove returns an error, tries making a soloMove\n
             - If lineMove, arrowMove and soloMove return errors, the program returns False
         """
-        self.board = self.tup_to_list(self.tup)
+        color = self.myColor(maximizer)
+
         if self.colored(marblesArray, color) is not True:
             # print(f"color error : '{color}'")
             return False
@@ -488,7 +500,6 @@ class Board(_TTTB, Node):
         return False
 
     def possibleChainsFromPoint(self, lengthChain, referenceMarble, currentMarble=None, move=None, chain=[], chainsList=[], possibleDirections=list(moves.values())):    
-        self.board = self.tup_to_list(self.tup)
         if currentMarble is None:
             currentMarble = referenceMarble
     
@@ -568,7 +579,6 @@ class Board(_TTTB, Node):
                 - the chain built from this marble
                 - the move
         """
-        self.board = self.tup_to_list(self.tup)
         randomLength = random.choice((1,2,3))
         chosenBoxes = []
         myMoves = list(moves.keys())
@@ -622,176 +632,22 @@ class Board(_TTTB, Node):
     
         return color, randomChain, a
         
-    def opposingMarblesOut(self, yourColor):
-        counter = 0
-        opposingColor = ''
-        self.board = self.tup_to_list(self.tup)
-        # ! COMMENT FAIRE CETTE CONDITION TERNAIRE ?
-        # opposingColor = 'W' if(yourColor == 'B') else opposingColor = 'B'
-
-        if yourColor == 'B':
-            opposingColor = 'W'
-        else:
-            opposingColor = 'B'
-
-        for row in self.board:
-            for box in row:
-                if box == opposingColor:
-                    counter += 1
-    
-        return 14 - counter
-
-    def legal_plays(self, player):
-        self.board = self.tup_to_list(self.tup)
-
-        allMoves = []      
-        chosenBoxes = []
-        myMoves = list(moves.keys())
-        lengthChains = 2
-        
-        if self.terminal:  # If the game is finished then no moves can be made
-            return set()
-    
-        for i,row in enumerate(self.board):
-            for j,value in enumerate(row):
-                if value == player:
-                    chosenBoxes.append([i,j])                    
-
-        for i in range(lengthChains):
-            for j in chosenBoxes:
-                possibleChains = self.possibleChainsFromPoint(i, j, None, None, [], [], possibleDirections=list(moves.values())) 
-               
-        for i in possibleChains:
-            for j in myMoves:
-                if self.action(i, j, player, False) != False:                    
-                    allMoves.append((i,j))
-        return {self.find_children(i) for i in allMoves}
-    
-    def find_children(self, moveA):
-        self.board = self.tup_to_list(self.tup)
-        self.action(moveA[0], moveA[1], self.turn, True)
-        newTup = self.list_to_tup(self.board)     
-        winner = self.winner()
-
-        if self.turn == "W":
-            turn2 = "B"
-        elif self.turn == "B":
-            turn2 = "W"        
-        is_terminal = winner is not None
-        return Board(newTup, turn2, winner, is_terminal)
-
-    def find_random_child(self):
-        if game.terminal:
-            return None  # If the game is finished then no moves can be made
-        self.board = self.tup_to_list(self.tup)
-        self.randomPlay(self.turn)
-        newTup = self.list_to_tup(self.board)     
-        winner = self.winner()
-        if self.turn == "W":
-            turn2 = "B"
-        elif self.turn == "B":
-            turn2 = "W"        
-        is_terminal = winner is not None
-        return Board(newTup, turn2, winner, is_terminal)
-
-    def is_terminal(self):              
-        return self.terminal
-
-    def winner(self):
-        scoreWhite = self.opposingMarblesOut('B')
-        scoreBlack = self.opposingMarblesOut('W')
-        
-        if scoreBlack == 6 and self.turn == "W":
-            return True
-        elif scoreBlack == 6 and self.turn == "B":
-            return False
-        elif scoreWhite == 6 and self.turn == "B":
-            return True
-        elif scoreWhite == 6 and self.turn == "W":
-            return False
-
-        return None
-
-    def reward(self):
-        if not self.terminal:
-            raise RuntimeError("reward called on nonterminal board")
-        if self.winner is True:
-            # It's your turn and you've already won. Should be impossible.
-            raise RuntimeError("reward called on unreachable board")
-        if self.winner is False:
-            return 0  # Your opponent has just won. Bad.
-        if self.winner is None:
-            return 0.5  # Board is a tie
-        # The winner is neither True, False, nor None
-        raise RuntimeError("board has unknown winner type ")
-        
-
-def play_game(a,b,c,d):
-    tree = MCTS_V2()
-    game = new_abalone_board(a,b,c,d)
-    print(game.displayBoard())
-
-    if game.terminal:
-        return 
-    for _ in range(50):
-        tree.do_rollout(game)            
-    game = tree.choose(game)  
-    
-    print(game.displayBoard())
-    if game.terminal:
-        return
-
-def new_abalone_board(a,b,c,d):
-    return Board(tup =a, turn=b, winner=c, terminal=d)
-
 
 if __name__ == '__main__':
-    #from Abalone_V2 import Board
-    #t = Board()
-    #scorewhite = t.opposingMarblesOut('B')
-    #scoreblack = t.opposingMarblesOut('W')
-    #color = random.choice(('W', 'B'))
+    state = Board([
+    ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
+    ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
+    ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
+    ["E", "E", "E", "E", "E", "E", "E", "E", "X"],
+    ["E", "E", "E", "E", "E", "E", "E", "E", "E"],
+    ["X", "E", "E", "E", "E", "E", "E", "E", "E"],
+    ["X", "X", "E", "E", "B", "B", "B", "E", "E"],
+    ["X", "X", "X", "B", "B", "B", "B", "B", "B"],
+    ["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
     
-    #while scoreblack < 6 and scorewhite < 6:
-    #    scorewhite = t.opposingMarblesOut('B')
-    #    scoreblack = t.opposingMarblesOut('W')
-
-    #    if color == 'B':
-    #        color = 'W'
-    #    elif color == 'W':
-    #        color = 'B'
-
-    #    t.randomPlay(color)
-    #t.displayBoard(board)
-    #print(scoreblack, scorewhite)
-    #if scoreblack == 6:
-    #    winner = "White"
-    #else:
-    #    winner = "Black"
-
-    #print(f"the winner is : {winner}")
+    state.displayBoard()
+    a,b= (minimax(state,3,True))   
+    print(a,b)
 
 
-    #test = Board()
-    #test.displayBoard(board)
-    #test.randomPlay("W")
-    #test.displayBoard(board)
 
-    
-    #simu = MonteCarloTreeSearch(board, current_player="W")
-    #simu.get_play()
-
-    #from Abalone_V2 import MCTS_V2, Node, Board
-    
-    res = play_game((
-        ("W", "W", "W", "W", "W", "X", "X", "X", "X"),
-        ("W", "W", "W", "W", "W", "W", "X", "X", "X"),
-        ("E", "E", "W", "W", "W", "E", "E", "X", "X"),
-        ("E", "E", "E", "E", "E", "E", "E", "E", "X"),
-        ("E", "E", "E", "E", "E", "E", "E", "E", "E"),
-        ("X", "E", "E", "E", "E", "E", "E", "E", "E"),
-        ("X", "X", "E", "E", "B", "B", "B", "E", "E"),
-        ("X", "X", "X", "B", "B", "B", "B", "B", "B"),
-        ("X", "X", "X", "X", "B", "B", "B", "B", "B")), "W", None, False  )
-    print(res)
- 
