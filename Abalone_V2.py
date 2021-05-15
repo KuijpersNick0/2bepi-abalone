@@ -57,9 +57,12 @@ def minimax(state, depth, maximizer, alpha, beta):
     # for s in R_successors:
     #     print(s)
 
-    for moveName in R_successors:        
+    for successor in R_successors:
+        # print(successor)     
         global node_count # permet de modifier une variable publique
         node_count += 1
+
+        moveName = successor
 
         copyBoard = copy.deepcopy(state.board)
         newState = Board(copyBoard)
@@ -67,7 +70,8 @@ def minimax(state, depth, maximizer, alpha, beta):
         newState.action(moveName[0], moveName[1], maximizer, True)  
         tempoScore = minimax(newState, depth - 1, not maximizer, alpha, beta)[0]
 
-        if shouldReplace(tempoScore):          
+        if shouldReplace(tempoScore):
+            # print("COCO CHANNEL COCO :", moveName)
             score = tempoScore
             move = moveName
 
@@ -85,7 +89,11 @@ def minimax(state, depth, maximizer, alpha, beta):
 
 def heuristic(state, maximizer):    
     result = 0
+    print(state.population(maximizer))
+    print(state.closeCenter(maximizer))
+
     result += state.population(maximizer)
+
     
     if state.winner(maximizer) == True:
         result += 200
@@ -127,20 +135,20 @@ class Board:
         for i in marbles:
             result += self.distance(i)
 
-        return result
+        return 1 / result * 2000
 
     def distance(self, marble):
         center = [4,4]
         #sum = 0
 
-        #for marble in marbles:
+        # for marble in marbles:
         #    rowDistance = abs(marble[0] - center[0])
         #    colDistance = abs(marble[1] - center[1])
 
         #    result = rowDistance + colDistance
         #    sum += result
 
-        #return sum
+        # return sum
  
 
         #dist= sqrt[(x2-x1)^2 +(y2-y1)^2]
@@ -416,14 +424,17 @@ class Board:
                 return True, marblesArray, marblesMoved
             else:
                 try: # ! test [CHECKED]
-                    lastOpponentMarbleValue = self.board[lastMarble[0] + len(marblesArray) * vectorMove[0]][lastMarble[1] + len(marblesArray) * vectorMove[1]]
+                    coord = [lastMarble[0] + len(marblesArray) * vectorMove[0], lastMarble[1] + len(marblesArray) * vectorMove[1]]
+                    lastOpponentMarbleValue = self.board[coord[0]][coord[1]]
+                    # print("one : ", lastOpponentMarbleValue, coord)
                 except:
                     try:
+                        # print("two : ", lastOpponentMarbleValue)
                         lastOpponentMarbleValue = self.board[lastMarble[0] + (len(marblesArray) - 1) * vectorMove[0]][lastMarble[1] + (len(marblesArray) - 1) * vectorMove[1]]
                     except:
                         return False, "outOfRange"
                     
-                if lastOpponentMarbleValue != 'E' and lastOpponentMarbleValue == 'X':
+                if lastOpponentMarbleValue != 'E' or lastOpponentMarbleValue == 'X':
                     return False, "NonEmptyError", marblesArray, moveName
                 else:
                     marblesMoved = []
@@ -728,48 +739,62 @@ if __name__ == '__main__':
     # a,b= (minimax(state,3,True))   
     # print(a,b)
 
-    #b = Board([
-    #["W", "W", "W", "W", "W", "X", "X", "X", "X"],
-    #["W", "W", "W", "W", "W", "W", "X", "X", "X"],
-    #["E", "E", "W", "W", "W", "E", "E", "X", "X"],
-    #["E", "E", "E", "E", "E", "E", "E", "E", "X"],
-    #["E", "E", "E", "E", "E", "E", "E", "E", "E"],
-    #["X", "E", "E", "E", "E", "E", "E", "E", "E"],
-    #["X", "X", "E", "E", "B", "B", "B", "E", "E"],
-    #["X", "X", "X", "B", "B", "B", "B", "B", "B"],
-    #["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
+    # b = Board([
+    # ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
+    # ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
+    # ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
+    # ["E", "E", "E", "E", "E", "E", "E", "E", "X"],
+    # ["E", "E", "E", "E", "E", "E", "E", "E", "E"],
+    # ["X", "E", "E", "E", "E", "E", "E", "E", "E"],
+    # ["X", "X", "E", "E", "B", "B", "B", "E", "E"],
+    # ["X", "X", "X", "B", "B", "B", "B", "B", "B"],
+    # ["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
 
     b = Board([
-    ["W", "W", "W", "W", "W", "X", "X", "X", "X"],
-    ["W", "W", "W", "W", "W", "W", "X", "X", "X"],
-    ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
-    ["E", "E", "E", "E", "E", "E", "E", "E", "X"],
-    ["E", "E", "E", "E", "E", "E", "E", "E", "E"],
-    ["X", "E", "E", "E", "E", "E", "E", "E", "E"],
-    ["X", "X", "E", "E", "B", "B", "B", "E", "E"],
-    ["X", "X", "X", "B", "B", "B", "B", "B", "B"],
-    ["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
+    ["W", "W", "E", "W", "B", "X", "X", "X", "X"],
+    ["W", "W", "W", "E", "W", "B", "X", "X", "X"],
+    ["E", "E", "W", "E", "W", "E", "E", "X", "X"],
+    ["E", "E", "E", "W", "E", "E", "E", "E", "X"],
+    ["E", "E", "E", "E", "W", "E", "E", "E", "E"],
+    ["X", "E", "B", "E", "E", "W", "E", "E", "E"],
+    ["X", "X", "E", "B", "B", "B", "B", "E", "E"],
+    ["X", "X", "X", "E", "B", "B", "B", "B", "B"],
+    ["X", "X", "X", "X", "E", "B", "B", "B", "B"]])
 
     # b = Board([
-    # ["W", "W", "E", "E", "W", "X", "X", "X", "X"],
+    # ["W", "W", "E", "E", "B", "X", "X", "X", "X"],
     # ["W", "W", "W", "E", "E", "E", "X", "X", "X"],
-    # ["E", "E", "W", "W", "W", "E", "E", "X", "X"],
+    # ["E", "E", "W", "E", "W", "E", "E", "X", "X"],
     # ["E", "E", "E", "E", "W", "E", "E", "E", "X"],
-    # ["E", "B", "W", "E", "E", "W", "E", "E", "E"],
-    # ["X", "E", "B", "W", "B", "E", "E", "E", "E"],
+    # ["E", "B", "W", "E", "W", "W", "E", "E", "E"],
+    # ["X", "E", "B", "W", "E", "E", "E", "E", "E"],
     # ["X", "X", "E", "W", "E", "B", "B", "E", "E"],
     # ["X", "X", "X", "B", "E", "B", "B", "B", "B"],
     # ["X", "X", "X", "X", "E", "B", "B", "B", "B"]])
 
     # print(b.population(False))
 
-    result = minimax(b, 3, False, -math.inf, math.inf)
-    print(result)
-    b.displayBoard()
+    result = minimax(b, 2, True, -math.inf, math.inf)
+    result = minimax(b, 2, True, -math.inf, math.inf)
+    # print(result)
+
+    # b.displayBoard()
+    # print(b.action([[1,4],[2,4]], "NE", True, True))
+    # b.displayBoard()
+    # print(b.action([[3, 3], [4, 4], [5, 5]], "SE", True))
+    # b.displayBoard()
+
+    # b.displayBoard()
+
+    print(heuristic(b, False))
+    print(heuristic(b, True))
 
     # a = [1, 2]
     # b = copy.copy(a)
     # c = copy.deepcopy(a)
+
+    # b.displayBoard()
+    # b.action()
     
 
     # print(id(a), id(b), id(c))

@@ -2,6 +2,8 @@ import socket as s
 import json
 import time
 import sys
+import Abalone_V2 as av
+import math
 
 
 class NotAJSONObject(Exception):
@@ -48,7 +50,6 @@ def receiveJSON(socket, timeout = 1):
 			if time.time() - start > timeout:
 				raise Timeout()
 	
-	socket.close()
 	return data
 
 def fetch(address, data, timeout=1):
@@ -87,13 +88,6 @@ if __name__ == '__main__':
 	
 	print("Waiting for ping...")
 
-	socket.listen(5)
-
-	c, addr = socket.accept()
-	print("got connection from", addr)
-	sendJSON(c, {"response":"pong"})
-	c.close()
-
 	socket = s.socket(s.AF_INET, s.SOCK_STREAM)
 	
 	try:
@@ -101,25 +95,37 @@ if __name__ == '__main__':
 	except s.error as e:
 		print(e)
 	
-	socket.listen(5)
-	c, addr = socket.accept()
-	print("got connection from", addr, c, sep=" ")
-	sendJSON(c, {"response":"pong"})
-	c.close()
+	socket.listen()
 
 	while True:
-		print("Waiting my turn")
-		socket = s.socket(s.AF_INET, s.SOCK_STREAM)
+		client, addr = socket.accept()
+		data = receiveJSON(client)
 
-		try:
-			socket.bind(('127.0.0.1', port))
-			socket.connect(('127.0.0.1', 3000))
-		except s.error as e:
-			print(e)
-		
-		sendJSON(socket, {
-   			"marbles": [[1, 1], [2, 2]],
-   			"direction": "SE"
-		})
+		if data["request"] == "ping":
+			sendJSON(client, {"response":"pong"})
+		elif data["request"] == "play":
+			board = data["state"]["board"]
+			currentPlayer = data["state"]["current"]
 
-		print("sent")
+			print(currentPlayer)
+
+			if currentPlayer == 0:
+				player = False
+			else:
+				player = True
+
+			state = av.Board(board)
+			score, move = av.minimax(state, 2, player, - math.inf, math.inf)
+
+			print(move)
+
+			sendJSON(client, {
+				"response":"move",
+				"move" : {
+					"marbles": move[0],
+					"direction": move[1]
+				},
+				"message":"il est tard"
+			})
+
+		client.close()
