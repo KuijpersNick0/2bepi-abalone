@@ -75,8 +75,8 @@ if __name__ == '__main__':
 	response = fetch(('127.0.0.1', 3000), {
 		"request": "subscribe",
 		"port": port,
-		"name": "katseyres",
-		"matricules": ["18332"]
+		"name": "zozo le donzo",
+		"matricules": ["18332", "20324"]
 	})
 
 	socket = s.socket(s.AF_INET, s.SOCK_STREAM)
@@ -107,15 +107,13 @@ if __name__ == '__main__':
 			board = data["state"]["board"]
 			currentPlayer = data["state"]["current"]
 
-			print(currentPlayer)
-
 			if currentPlayer == 0:
 				player = False
 			else:
 				player = True
 
 			state = av.Board(board)
-			score, move = av.minimax(state, 2, player, - math.inf, math.inf)
+			score, move = av.minimax(state, 2, True, player, - math.inf, math.inf)
 
 			print(move)
 

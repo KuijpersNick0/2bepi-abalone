@@ -17,13 +17,13 @@ moves = {
 """
 node_count=0
 
-def minimax(state, depth, maximizer, alpha, beta):
+def minimax(state, depth, maximizer, turn, alpha, beta):
     move = -1
     
     if state.is_terminal():        
         return (-math.inf if maximizer else math.inf), -1
     elif depth == 0:         
-        return heuristic(state, maximizer), -1
+        return heuristic(state, turn), -1
 
     if maximizer:       
         score = -math.inf
@@ -34,7 +34,7 @@ def minimax(state, depth, maximizer, alpha, beta):
         # x est l'ancien score, on souhaite savoir si l'ancien score est mieux classé (donc plus petit) que le meilleur score pour maximizer = False
         def shouldReplace(x): return x < score
 
-    successors = state.legal_plays(maximizer) #maximizer c'est le turn
+    successors = state.legal_plays(turn) #maximizer c'est le turn
     boards = []
 
     # state.displayBoard()
@@ -67,8 +67,8 @@ def minimax(state, depth, maximizer, alpha, beta):
         copyBoard = copy.deepcopy(state.board)
         newState = Board(copyBoard)
 
-        newState.action(moveName[0], moveName[1], maximizer, True)  
-        tempoScore = minimax(newState, depth - 1, not maximizer, alpha, beta)[0]
+        newState.action(moveName[0], moveName[1], turn, True)  
+        tempoScore = minimax(newState, depth - 1, not maximizer, not turn, alpha, beta)[0]
 
         if shouldReplace(tempoScore):
             # print("COCO CHANNEL COCO :", moveName)
@@ -179,7 +179,7 @@ class Board:
         compte = self.opposingMarblesOut(maximizer)
         resultat = 0
         for i in range(compte):
-            resultat += 10
+            resultat += 30
 
         return resultat
 
@@ -446,9 +446,19 @@ class Board:
 
                     for i in range(1, len(marblesArray)):
                         opponentValue = self.board[lastMarble[0] + i * vectorMove[0]][lastMarble[1] + i * vectorMove[1]]
-                        if(opponentValue == 'E'):
+                        color = self.board[lastMarble[0]][lastMarble[1]]
+
+                        if color == 'W':
+                            opponentColor = 'B'
+                        else:
+                            opponentColor = 'W'
+
+                        if(opponentValue != opponentColor):
                             break
                         opponentMarbles.append([lastMarble[0] + i * vectorMove[0], lastMarble[1] + i * vectorMove[1]])
+
+                        if self.board[opponentMarbles[-1][0] + vectorMove[0]][opponentMarbles[-1][1] + vectorMove[1]] != 'E':
+                            return False, None
 
                     if len(opponentMarbles) == 1:
                         self.soloMove(opponentMarbles, moveName, opponent=True)
@@ -478,6 +488,7 @@ class Board:
             if ((moveName.__contains__('S') and marble[0] != 8) or (moveName.__contains__('N') and marble[0] != 0)) and ((moveName.__contains__('W') and marble[1] != 0) or (moveName.__contains__('E') and marble[1] != 8)): 
                 nextMarbleValue = self.board[marble[0] + moves[moveName][0]][marble[1] + moves[moveName][1]]
                 currentMarbleValue = self.board[marble[0]][marble[1]]
+                # print(currentMarbleValue, nextMarbleValue)
                 if nextMarbleValue == currentMarbleValue:
                     return False, "allyPchainsenceError", marblesArray, moveName
                 elif nextMarbleValue == 'X':
@@ -486,7 +497,9 @@ class Board:
                     pass
                 else:
                     try:
-                        if self.board[marble[0] + 2 * moves[moveName][0]][marble[1] + 2 * moves[moveName][1]] == nextMarbleValue:
+                        tempValue = [marble[0] + moves[moveName][0], marble[1] + moves[moveName][1]]
+                        print(tempValue)
+                        if self.board[tempValue[0]][tempValue[1]] == nextMarbleValue:
                             return False, "opponentMoveError", marblesArray, moveName
                     except:
                         return False, "outOfRange"
@@ -751,15 +764,15 @@ if __name__ == '__main__':
     # ["X", "X", "X", "X", "B", "B", "B", "B", "B"]])
 
     b = Board([
-    ["W", "W", "E", "W", "B", "X", "X", "X", "X"],
-    ["W", "W", "W", "E", "W", "B", "X", "X", "X"],
-    ["E", "E", "W", "E", "W", "E", "E", "X", "X"],
-    ["E", "E", "E", "W", "E", "E", "E", "E", "X"],
-    ["E", "E", "E", "E", "W", "E", "E", "E", "E"],
-    ["X", "E", "B", "E", "E", "W", "E", "E", "E"],
-    ["X", "X", "E", "B", "B", "B", "B", "E", "E"],
-    ["X", "X", "X", "E", "B", "B", "B", "B", "B"],
-    ["X", "X", "X", "X", "E", "B", "B", "B", "B"]])
+    ["E", "E", "E", "E", "E", "X", "X", "X", "X"],
+    ["E", "E", "E", "E", "W", "E", "X", "X", "X"],
+    ["E", "E", "W", "W", "W", "W", "E", "X", "X"],
+    ["E", "W", "B", "W", "W", "W", "B", "B", "X"],
+    ["E", "E", "B", "B", "W", "W", "B", "B", "W"],
+    ["X", "E", "B", "B", "W", "W", "E", "E", "E"],
+    ["X", "X", "E", "E", "E", "B", "B", "B", "E"],
+    ["X", "X", "X", "E", "B", "E", "E", "B", "E"],
+    ["X", "X", "X", "X", "E", "E", "E", "E", "E"]])
 
     # b = Board([
     # ["W", "W", "E", "E", "B", "X", "X", "X", "X"],
@@ -774,20 +787,16 @@ if __name__ == '__main__':
 
     # print(b.population(False))
 
-    result = minimax(b, 2, True, -math.inf, math.inf)
-    result = minimax(b, 2, True, -math.inf, math.inf)
+    # result = minimax(b, 2, True, False, -math.inf, math.inf)
     # print(result)
 
-    # b.displayBoard()
-    # print(b.action([[1,4],[2,4]], "NE", True, True))
-    # b.displayBoard()
+    b.displayBoard()
+    print(b.action([[3,3],[3,4],[3,5]], "W", True, True))
+    b.displayBoard()
     # print(b.action([[3, 3], [4, 4], [5, 5]], "SE", True))
     # b.displayBoard()
 
     # b.displayBoard()
-
-    print(heuristic(b, False))
-    print(heuristic(b, True))
 
     # a = [1, 2]
     # b = copy.copy(a)
